@@ -71,6 +71,7 @@ export default function InfiniteImageGrid() {
   const [scale, setScale] = useState(0.7);
   const [containerSize] = useState(160); // 160% to ensure coverage when zoomed out
   const [isReady, setIsReady] = useState(false); // Don't render until dimensions calculated
+  const [isLoading, setIsLoading] = useState(true); // Show loader until images preloaded
 
   // Update visible items when scale changes
   useEffect(() => {
@@ -126,6 +127,9 @@ export default function InfiniteImageGrid() {
   // Initialize display info and velocity history
   useEffect(() => {
     if (typeof window !== 'undefined') {
+      // Disable body scroll
+      document.body.style.overflow = 'hidden';
+
       // Calculate dimensions FIRST before any rendering
       calculateDimensions(window.innerHeight);
 
@@ -154,11 +158,39 @@ export default function InfiniteImageGrid() {
       // Mark as ready to render
       setIsReady(true);
 
-      // Entrance animation: zoom in from 0.7 to 1.0
-      setTimeout(() => {
-        setScale(1);
-      }, 100);
+      // Preload initial images before showing
+      const imagesToPreload = shuffledPottery.current.slice(0, 10); // First 10 images
+      let loadedCount = 0;
+
+      const preloadImage = (src: string) => {
+        return new Promise((resolve) => {
+          const img = new Image();
+          img.onload = () => {
+            loadedCount++;
+            resolve(true);
+          };
+          img.onerror = () => {
+            loadedCount++;
+            resolve(false);
+          };
+          img.src = src;
+        });
+      };
+
+      Promise.all(imagesToPreload.map(item => preloadImage(item.img))).then(() => {
+        setIsLoading(false);
+
+        // Entrance animation: zoom in from 0.7 to 1.0
+        setTimeout(() => {
+          setScale(1);
+        }, 100);
+      });
     }
+
+    return () => {
+      // Re-enable body scroll on unmount
+      document.body.style.overflow = '';
+    };
   }, []);
 
   // Generate item for a specific grid position (simple zig-zag)
@@ -476,28 +508,52 @@ export default function InfiniteImageGrid() {
 
 
   return (
-    <div
-      style={{
-        width: `${containerSize}%`,
-        height: `${containerSize}vh`,
-        overflow: 'hidden',
-        backgroundColor: '#f9f9f9',
-        position: 'relative',
-        touchAction: 'none',
-        transform: `scale(${scale})`,
-        transformOrigin: '50% 50%',
-        transition: 'transform 1.2s cubic-bezier(0.4, 0, 0.2, 1)',
-        left: `${-(containerSize - 100) / 2}%`,
-        top: `${-(containerSize - 100) / 2}vh`,
-      }}
-      onMouseDown={handleMouseDown}
-      onMouseMove={handleMouseMove}
-      onMouseUp={handleMouseUp}
-      onMouseLeave={handleMouseUp}
-      onTouchStart={handleTouchStart}
-      onTouchMove={handleTouchMove}
-      onTouchEnd={handleTouchEnd}
-    >
+    <>
+      {/* Loading screen */}
+      {isLoading && (
+        <div
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            width: '100%',
+            height: '100vh',
+            backgroundColor: '#000000',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 9999,
+          }}
+        >
+          <div style={{ color: '#ffffff', fontSize: '18px', fontFamily: 'system-ui, sans-serif' }}>
+            Loading...
+          </div>
+        </div>
+      )}
+
+      {/* Main container */}
+      <div
+        style={{
+          width: `${containerSize}%`,
+          height: `${containerSize}vh`,
+          overflow: 'hidden',
+          backgroundColor: '#f9f9f9',
+          position: 'relative',
+          touchAction: 'none',
+          transform: `scale(${scale})`,
+          transformOrigin: '50% 50%',
+          transition: 'transform 1.2s cubic-bezier(0.4, 0, 0.2, 1)',
+          left: `${-(containerSize - 100) / 2}%`,
+          top: `${-(containerSize - 100) / 2}vh`,
+        }}
+        onMouseDown={handleMouseDown}
+        onMouseMove={handleMouseMove}
+        onMouseUp={handleMouseUp}
+        onMouseLeave={handleMouseUp}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+      >
       <div
         ref={containerRef}
         style={{
@@ -506,7 +562,7 @@ export default function InfiniteImageGrid() {
           left: 0,
         }}
       >
-        {visibleItems.map((item) => (
+        {isReady && visibleItems.map((item) => (
           <img
             key={item.id}
             data-item-x={item.x}
@@ -532,5 +588,6 @@ export default function InfiniteImageGrid() {
         ))}
       </div>
     </div>
+    </>
   );
 }
