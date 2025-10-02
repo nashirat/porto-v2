@@ -1,0 +1,6 @@
+---
+description:
+globs:
+alwaysApply: true
+---
+Do not run development commands, like "npm run dev", ill run it myself.

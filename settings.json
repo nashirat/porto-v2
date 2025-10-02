@@ -1,0 +1,161 @@
+{
+    "workbench.colorTheme": "Night Wolf (black) (No Italics)", // Sets the color theme
+    "workbench.activityBar.location": "hidden", // Hides the activity bar (icons on the side)
+    "workbench.editor.showTabs": "single", // Shows only a single tab in the editor
+    "workbench.statusBar.visible": false, // Hides the status bar at the bottom
+    "workbench.startupEditor": "none", // No startup editor/welcome screen on launch
+    "workbench.tips.enabled": false, // Disables tips and hints
+    "editor.minimap.enabled": false, // Disables the code preview minimap on the right
+    "breadcrumbs.enabled": false, // Disables the breadcrumb navigation at top of editor
+    "workbench.sideBar.location": "right", // Positions sidebar on the right side
+    // "workbench.iconTheme": "material-icon-theme", // Icon theme (currently commented out)
+    "material-icon-theme.hidesExplorerArrows": true, // Hides arrows in the explorer view
+    "workbench.tree.enableStickyScroll": false, // Disables sticky scroll for tree views
+    "workbench.tree.renderIndentGuides": "none", // Hides indent guides in tree views
+    "workbench.tree.indent": 8, // Sets indent size in tree views to 8 spaces
+    "explorer.compactFolders": false, // Shows folders separately, not compacted
+    "explorer.confirmDragAndDrop": false, // Disables confirmation for drag and drop actions
+    "explorer.confirmDelete": false, // Disables confirmation when deleting files
+    "explorer.decorations.badges": false, // Disables badges in the explorer
+    "git.decorations.enabled": false, // Disables Git decorations
+    "window.zoomLevel": 3, // Sets the window zoom level
+    "window.customTitleBarVisibility": "never", // Hides the custom title bar
+    "window.titleBarStyle": "native", // Uses native title bar style
+    "custom-ui-style.electron": { // Electron window customization
+      "titleBarStyle": "hiddenInset", // Hides title bar with inset
+      "trafficLightPosition": { // Positions window controls (macOS)
+        "x": 20,
+        "y": 16
+      }
+    },
+    "custom-ui-style.stylesheet": { // Custom CSS styling for UI elements
+      ".notification-toast": "box-shadow: none !important", // Removes shadow from notifications
+      ".quick-input-widget.show-file-icons": "box-shadow: none !important", // Removes shadow from quick input
+      ".quick-input-widget": "top: 25vh !important", // Positions the quick input widget
+      ".quick-input-list .scrollbar": "display: none", // Hides scrollbar in quick input
+      ".monaco-action-bar.quick-input-inline-action-bar": "display: none", // Hides action bar in quick input
+      ".editor-widget.find-widget": "box-shadow: none; border-radius: 4px", // Styles find widget
+      ".quick-input-titlebar": "background: #100B15 !important", // Sets background color for quick input titlebar
+      ".monaco-workbench .part.editor > .content .editor-group-container > .title.title-border-bottom:after": "display: none", // Removes bottom border of editor title
+      ".monaco-scrollable-element > .shadow.top": "display: none", // Removes top shadow from scrollable elements
+      ".sidebar .title-label": "padding: 0 !important", // Removes padding from sidebar titles
+      ".sidebar": "border: none !important", // Removes border from sidebar
+      ".monaco-workbench .monaco-list:not(.element-focused):focus:before": "outline: none !important", // Removes focus outline from lists
+      ".monaco-list-row.focused": "outline: none !important", // Removes focus outline from list rows
+      ".monaco-editor .scroll-decoration": "display: none", // Hides scroll decorations
+      ".title-actions": "display: none !important", // Hides title actions
+      ".title.show-file-icons .label-container .monaco-icon-label.file-icon": "justify-content: center; padding: 0 !important", // Centers file icons
+      ".title .monaco-icon-label:after": "margin-right: 0", // Removes right margin from icon labels
+      ".monaco-workbench .part.editor > .content .editor-group-container > .title > .label-container > .title-label": "padding-left: 60px", // Adds left padding to title label
+      ".title .monaco-icon-label.file-icon": "margin: 0 60px", // Sets margin for file icons
+      ".monaco-editor .cursors-layer .cursor": "background-image: linear-gradient(135deg, #ffaffc 10%, #DA70D6 100%)", // Custom cursor gradient
+      ".panel.integrated-terminal": "border: none !important", // Removes terminal border
+      ".panel.integrated-terminal .split-view-view": "border: none !important", // Removes border between terminal splits
+      ".panel-drag-area": "display: none !important", // Removes panel drag area
+      ".part.panel": "border-top: none !important", // Removes the top border of the panel
+      ".part.panel.integrated-terminal": "border-color: #000000 !important", // Sets panel border color to black
+      ".monaco-workbench .part.panel": "border-top-width: 0px !important", // Removes top border width for panel
+      ".monaco-workbench .part.panel.integrated-terminal": "border: none !important", // Removes terminal borders
+      ".terminal-wrapper": "border: none !important", // Removes terminal wrapper border
+      ".terminal": "border: none !important", // Removes terminal border
+      ".split-view-container": "border: none !important", // Removes split view container border
+      ".split-view-view": "border: none !important", // Removes split view border
+      ".monaco-split-view2": "border: none !important" // Removes split view border
+    },
+    "custom-ui-style.font.sansSerif": "Dank Mono", // Sets sans-serif font to Dank Mono
+    "editor.multiCursorModifier": "ctrlCmd", // Sets modifier key for multiple cursors
+    "editor.cursorBlinking": "solid", // Sets cursor to solid (no blinking)
+    "editor.cursorStyle": "block", // Sets cursor style to block
+    "workbench.colorCustomizations": { // Custom colors for editor elements
+      "editorCursor.background": "#000000", // Sets cursor background color
+      "editorOverviewRuler.wordHighlightStrongForeground": "#0000", // Hides strong word highlights in overview ruler
+      "editorOverviewRuler.selectionHighlightForeground": "#0000", // Hides selection highlights in overview ruler
+      "editorOverviewRuler.rangeHighlightForeground": "#0000", // Hides range highlights in overview ruler
+      "editorOverviewRuler.wordHighlightForeground": "#0000", // Hides word highlights in overview ruler
+      "editorOverviewRuler.bracketMatchForeground": "#0000", // Hides bracket match in overview ruler
+      "editorOverviewRuler.findMatchForeground": "#0000", // Hides find match in overview ruler
+      "editorOverviewRuler.modifiedForeground": "#0000", // Hides modified indicator in overview ruler
+      "editorOverviewRuler.deletedForeground": "#0000", // Hides deleted indicator in overview ruler
+      "editorOverviewRuler.warningForeground": "#0000", // Hides warning indicator in overview ruler
+      "editorOverviewRuler.addedForeground": "#0000", // Hides added indicator in overview ruler
+      "editorOverviewRuler.errorForeground": "#0000", // Hides error indicator in overview ruler
+      "editorOverviewRuler.infoForeground": "#0000", // Hides info indicator in overview ruler
+      "editorOverviewRuler.border": "#0000", // Hides border of overview ruler
+      "terminal.border": "#000000", // Sets terminal border color to black
+      "terminal.background": "#000000", // Sets terminal background color to black
+      "terminalCursor.background": "#000000", // Sets terminal cursor background to black
+      "panel.border": "#000000", // Sets panel border color to black
+      "panel.background": "#000000", // Sets panel background to black
+      "panelTitle.activeBorder": "#000000", // Sets active panel title border to black
+      "panelTitle.activeForeground": "#FFFFFF", // Sets active panel title text to white
+      "panelTitle.inactiveForeground": "#999999", // Sets inactive panel title text to gray
+      "panelSectionHeader.border": "#000000", // Sets panel section header border to black
+      "[Aura Dracula Spirit (Soft)]": { // Theme-specific customizations
+        "editorSuggestWidget.selectedBackground": "#3A334B", // Background color for selected suggestion
+        "sideBar.background": "#191521" // Background color for sidebar
+      }
+    },
+    "editor.fontFamily": "Dank Mono", // Sets editor font to Dank Mono
+    "editor.fontSize": 14, // Sets editor font size
+    "editor.fontLigatures": true, // Enables font ligatures
+    "editor.lineHeight": 2.5, // Sets line height
+    "editor.tokenColorCustomizations": { // Custom syntax highlighting styles
+      "textMateRules": [
+        {
+          "scope": "comment",
+          "settings": {
+            "fontStyle": "italic" // Makes comments italic
+          }
+        }
+      ]
+    },
+    "editor.stickyScroll.enabled": false, // Disables sticky scroll
+    "editor.colorDecorators": false, // Disables color decorators
+    "editor.codeLens": false, // Disables code lens
+    "editor.links": false, // Disables clickable links in editor
+    "editor.matchBrackets": "never", // Disables bracket matching
+    "editor.parameterHints.enabled": false, // Disables parameter hints
+    "editor.lightbulb.enabled": "off", // Disables lightbulb code actions
+    "editor.hover.enabled": false, // Disables hover tooltips
+    "files.trimTrailingWhitespace": true, // Removes trailing whitespace on save
+    "files.insertFinalNewline": true, // Adds newline at end of file on save
+    "scm.diffDecorations": "none", // Disables source control diff decorations
+    "editor.lineNumbers": "relative", // Shows relative line numbers
+    "editor.tabSize": 2, // Sets tab size to 2 spaces
+    "editor.detectIndentation": false, // Disables automatic indent detection
+    "editor.showFoldingControls": "never", // Hides code folding controls
+    "editor.guides.indentation": false, // Disables indentation guides
+    "editor.renderWhitespace": "none", // Hides whitespace characters
+    "editor.renderLineHighlight": "none", // Disables current line highlight
+    "editor.occurrencesHighlight": "off", // Disables highlighting of occurrences
+    "editor.selectionHighlight": false, // Disables selection highlighting
+    "editor.scrollbar.horizontal": "hidden", // Hides horizontal scrollbar
+    "editor.scrollbar.vertical": "hidden", // Hides vertical scrollbar
+    "editor.overviewRulerBorder": false, // Hides overview ruler border
+    "editor.hideCursorInOverviewRuler": true, // Hides cursor in overview ruler
+    "editor.quickSuggestions": { // Controls quick suggestions
+      "other": "off" // Turns off quick suggestions for non-specific contexts
+    },
+    "editor.suggestOnTriggerCharacters": false, // Disables suggestions on trigger characters
+    "editor.tabCompletion": "on", // Enables tab completion
+    "editor.snippetSuggestions": "top", // Shows snippets at the top of suggestion list
+    "emmet.triggerExpansionOnTab": true, // Expands Emmet abbreviations with Tab key
+    "files.autoSave": "afterDelay", // Auto-saves files after delay
+    "update.mode": "none", // Disables automatic updates
+    "extensions.ignoreRecommendations": true, // Ignores extension recommendations
+    "terminal.integrated.defaultProfile.windows": "PowerShell", // Sets default Windows terminal
+    "terminal.integrated.defaultProfile.osx": "bash", // Sets default macOS terminal
+    "terminal.integrated.defaultProfile.linux": "bash", // Sets default Linux terminal
+    "terminal.integrated.cursorBlinking": false, // Disables terminal cursor blinking
+    "terminal.integrated.cursorStyle": "block", // Sets terminal cursor to block style
+    "terminal.integrated.fontFamily": "Dank Mono", // Sets terminal font
+    "terminal.integrated.fontSize": 14, // Sets terminal font size
+    "terminal.integrated.lineHeight": 1.5, // Sets terminal line height
+    "terminal.integrated.drawBoldTextInBrightColors": false, // Disables bright colors for bold text
+    "terminal.integrated.minimumContrastRatio": 1, // Reduces minimum contrast ratio
+    "terminal.integrated.tabs.enabled": false, // Disables terminal tabs
+    "terminal.integrated.persistentSessionReviveProcess": "never", // Disables session restore
+    "terminal.integrated.shellIntegration.enabled": false, // Disables shell integration
+    "terminal.integrated.splitCwd": "workspaceRoot", // Sets split terminal to workspace root
+    "terminal.integrated.scrollback": 10000 // Sets terminal scrollback buffer
+  }

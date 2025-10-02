@@ -1,0 +1,21 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(/D:\\Projects\\porto-v2/**)",
+      "Read(/D:\\Projects\\porto-v2/**)",
+      "Read(/D:\\Projects\\porto-v2/**)",
+      "Read(/D:\\Projects\\porto-v2/**)",
+      "Read(/D:\\Projects\\porto-v2/**)",
+      "Read(/D:\\Projects\\porto-v2\\src/**)",
+      "Read(/D:\\Projects\\porto-v2\\src/**)",
+      "Read(/D:\\Projects\\porto-v2\\src/**)",
+      "Read(/D:\\Projects\\porto-v2\\src\\components/**)",
+      "Read(/D:\\Projects\\porto-v2\\src/**)",
+      "Read(/D:\\Projects\\porto-v2/**)",
+      "Read(//c/Users/FSOS/Pictures/Screenshots/**)",
+      "Bash(npm run build:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}
