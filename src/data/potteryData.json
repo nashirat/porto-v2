@@ -2,6 +2,7 @@
   {"id": 1, "title": "Reset Indonesia", "description": "Bold activism poster", "author": "Retrix", "img": "/Frame 32 (1).png"},
   {"id": 2, "title": "Stay Loud", "description": "Rise up poster", "author": "Retrix", "img": "/Frame 32 (2).png"},
   {"id": 3, "title": "Naga Gaga", "description": "Typography artwork", "author": "Retrix", "img": "/Frame 32 (3).png"},
+  {"id": 4, "title": "Video Artwork", "description": "Motion design piece", "author": "Retrix", "img": "/video1.mp4", "type": "video"},
   {"id": 10, "title": "Design 10", "description": "Artwork", "author": "Retrix", "img": "/Frame 32 (10).png"},
   {"id": 11, "title": "Design 11", "description": "Artwork", "author": "Retrix", "img": "/Frame 32 (11).png"},
   {"id": 12, "title": "Design 12", "description": "Artwork", "author": "Retrix", "img": "/Frame 32 (12).png"},
