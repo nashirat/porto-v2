@@ -1,27 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import potteryData from "../data/potteryData.json";
-
-interface Position {
-  x: number;
-  y: number;
-}
-
-interface PotteryItem {
-  id: number;
-  title: string;
-  description: string;
-  author: string;
-  img: string;
-}
-
-interface GridItem {
-  id: string;
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-  potteryData: PotteryItem;
-}
+import { Position, PotteryItem, GridItem } from "../types";
+import { shuffleArray, preloadImages } from "../utils/helpers";
 
 export default function InfiniteImageGrid() {
   // Refs for container and animation frame
@@ -30,9 +10,12 @@ export default function InfiniteImageGrid() {
 
   // Dragging state
   const isDragging = useRef(false);
+  const isWheeling = useRef(false);
+  const wheelingTimeout = useRef<number | null>(null);
   const lastPosition = useRef<Position>({ x: 0, y: 0 });
   const cameraOffset = useRef<Position>({ x: 0, y: 0 });
   const targetOffset = useRef<Position>({ x: 0, y: 0 });
+  const lastRenderedOffset = useRef<Position>({ x: 0, y: 0 });
 
   // Grid settings - Dynamic sizing based on viewport
   const itemWidth = useRef(476);
@@ -46,7 +29,7 @@ export default function InfiniteImageGrid() {
   const momentumStrength = 0.10; // Much less momentum
   const smoothingFactor = 0.02;
   const velocityHistory = useRef<Position[]>([]);
-  const velocityHistorySize = 3; // Shorter velocity history for quicker stop
+  const velocityHistorySize = 1; // Single frame for instant direction changes
   const isMoving = useRef(false);
   const lastMoveTime = useRef(0);
   const moveThreshold = 60; // More responsive movement detection
@@ -101,16 +84,6 @@ export default function InfiniteImageGrid() {
   const getItemSpacingY = () => itemHeight.current + gapY.current;
   const getZigzagOffset = () => getItemSpacingY() * 0.5;
 
-  // Shuffle array using Fisher-Yates algorithm
-  const shuffleArray = <T,>(array: T[]): T[] => {
-    const shuffled = [...array];
-    for (let i = shuffled.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
-    }
-    return shuffled;
-  };
-
   // Get next pottery item from shuffled array
   const getNextPottery = (): PotteryItem => {
     // Re-shuffle when we've used all items
@@ -159,25 +132,9 @@ export default function InfiniteImageGrid() {
       setIsReady(true);
 
       // Preload initial images before showing
-      const imagesToPreload = shuffledPottery.current.slice(0, 10); // First 10 images
-      let loadedCount = 0;
+      const imagesToPreload = shuffledPottery.current.slice(0, 10).map(item => item.img);
 
-      const preloadImage = (src: string) => {
-        return new Promise((resolve) => {
-          const img = new Image();
-          img.onload = () => {
-            loadedCount++;
-            resolve(true);
-          };
-          img.onerror = () => {
-            loadedCount++;
-            resolve(false);
-          };
-          img.src = src;
-        });
-      };
-
-      Promise.all(imagesToPreload.map(item => preloadImage(item.img))).then(() => {
+      preloadImages(imagesToPreload).then(() => {
         setIsLoading(false);
 
         // Entrance animation: zoom in from 0.7 to 1.0
@@ -348,19 +305,27 @@ export default function InfiniteImageGrid() {
       cameraOffset.current.x += (targetOffset.current.x - cameraOffset.current.x) * dynamicSmoothing;
       cameraOffset.current.y += (targetOffset.current.y - cameraOffset.current.y) * dynamicSmoothing;
 
-      // Update all item transforms
-      if (containerRef.current) {
-        const items = containerRef.current.querySelectorAll('[data-item-x]');
-        items.forEach((item) => {
-          const htmlItem = item as HTMLElement;
-          const x = parseFloat(htmlItem.dataset.itemX || '0');
-          const y = parseFloat(htmlItem.dataset.itemY || '0');
-          htmlItem.style.transform = `translate3d(${x + cameraOffset.current.x}px, ${y + cameraOffset.current.y}px, 0)`;
-        });
+      // Update all item transforms only if camera moved
+      const cameraX = cameraOffset.current.x;
+      const cameraY = cameraOffset.current.y;
+
+      if (containerRef.current && (cameraX !== lastRenderedOffset.current.x || cameraY !== lastRenderedOffset.current.y)) {
+        const items = containerRef.current.children;
+        const len = items.length;
+
+        for (let i = 0; i < len; i++) {
+          const htmlItem = items[i] as HTMLElement;
+          const x = parseFloat(htmlItem.dataset.itemX!);
+          const y = parseFloat(htmlItem.dataset.itemY!);
+          htmlItem.style.transform = `translate3d(${x + cameraX}px, ${y + cameraY}px, 0)`;
+        }
+
+        lastRenderedOffset.current.x = cameraX;
+        lastRenderedOffset.current.y = cameraY;
       }
 
       // Update visible items when camera moves significantly
-      if (Math.abs(distance) > 200) {
+      if (distance > 200) {
         updateVisibleItems();
       }
 
@@ -395,8 +360,11 @@ export default function InfiniteImageGrid() {
 
   // Mouse event handlers (same logic as original)
   const handleMouseDown = (e: React.MouseEvent) => {
+    if (isWheeling.current) return; // Ignore if trackpad is active
+
     isDragging.current = true;
-    lastPosition.current = { x: e.clientX, y: e.clientY };
+    lastPosition.current.x = e.clientX;
+    lastPosition.current.y = e.clientY;
     lastMoveTime.current = performance.now();
     isMoving.current = true;
 
@@ -407,7 +375,7 @@ export default function InfiniteImageGrid() {
   };
 
   const handleMouseMove = (e: React.MouseEvent) => {
-    if (!isDragging.current) return;
+    if (!isDragging.current || isWheeling.current) return; // Ignore if trackpad is active
 
     const deltaX = e.clientX - lastPosition.current.x;
     const deltaY = e.clientY - lastPosition.current.y;
@@ -416,10 +384,10 @@ export default function InfiniteImageGrid() {
       targetOffset.current.x += deltaX;
       targetOffset.current.y += deltaY;
 
-
       updateVelocity(deltaX, deltaY);
 
-      lastPosition.current = { x: e.clientX, y: e.clientY };
+      lastPosition.current.x = e.clientX;
+      lastPosition.current.y = e.clientY;
       lastMoveTime.current = performance.now();
       isMoving.current = true;
     }
@@ -442,9 +410,10 @@ export default function InfiniteImageGrid() {
   // Touch event handlers (same logic as original)
   const handleTouchStart = (e: React.TouchEvent) => {
     e.preventDefault();
-    if (e.touches.length === 1) {
+    if (e.touches.length === 1 && !isWheeling.current) {
       isDragging.current = true;
-      lastPosition.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+      lastPosition.current.x = e.touches[0].clientX;
+      lastPosition.current.y = e.touches[0].clientY;
       lastMoveTime.current = performance.now();
       isMoving.current = true;
 
@@ -455,7 +424,7 @@ export default function InfiniteImageGrid() {
 
   const handleTouchMove = (e: React.TouchEvent) => {
     e.preventDefault();
-    if (!isDragging.current || e.touches.length !== 1) return;
+    if (!isDragging.current || e.touches.length !== 1 || isWheeling.current) return;
 
     const deltaX = e.touches[0].clientX - lastPosition.current.x;
     const deltaY = e.touches[0].clientY - lastPosition.current.y;
@@ -464,10 +433,10 @@ export default function InfiniteImageGrid() {
       targetOffset.current.x += deltaX;
       targetOffset.current.y += deltaY;
 
-
       updateVelocity(deltaX, deltaY);
 
-      lastPosition.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+      lastPosition.current.x = e.touches[0].clientX;
+      lastPosition.current.y = e.touches[0].clientY;
       lastMoveTime.current = performance.now();
       isMoving.current = true;
     }
@@ -485,6 +454,38 @@ export default function InfiniteImageGrid() {
     if (now - lastMoveTime.current > moveThreshold) {
       isMoving.current = false;
       momentum.current = { x: 0, y: 0 };
+    }
+  };
+
+  // Wheel event handler for trackpad scrolling
+  const handleWheel = (e: React.WheelEvent) => {
+    e.preventDefault();
+
+    // Use deltaX and deltaY directly - trackpad provides smooth pixel values
+    const deltaX = -e.deltaX;
+    const deltaY = -e.deltaY;
+
+    if (deltaX !== 0 || deltaY !== 0) {
+      isWheeling.current = true;
+
+      targetOffset.current.x += deltaX;
+      targetOffset.current.y += deltaY;
+
+      // Direct momentum update for instant direction response
+      momentum.current.x = deltaX * momentumStrength;
+      momentum.current.y = deltaY * momentumStrength;
+
+      lastMoveTime.current = performance.now();
+      isMoving.current = true;
+
+      // Clear and reset timeout to avoid creating multiple timers
+      if (wheelingTimeout.current !== null) {
+        clearTimeout(wheelingTimeout.current);
+      }
+      wheelingTimeout.current = window.setTimeout(() => {
+        isWheeling.current = false;
+        wheelingTimeout.current = null;
+      }, 100);
     }
   };
 
@@ -526,7 +527,7 @@ export default function InfiniteImageGrid() {
           }}
         >
           <div style={{ color: '#ffffff', fontSize: '18px', fontFamily: 'system-ui, sans-serif' }}>
-            Loading...
+            Loading images, insert loader animation here
           </div>
         </div>
       )}
@@ -553,6 +554,7 @@ export default function InfiniteImageGrid() {
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
+        onWheel={handleWheel}
       >
       <div
         ref={containerRef}
