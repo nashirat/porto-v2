@@ -1,5 +1,9 @@
-import { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import potteryData from "../data/potteryData.json";
+import GridItemContainer from "./GridItemContainer";
+import GridImageContent from "./GridImageContent";
+import GridVideoContent from "./GridVideoContent";
+import { DragContext } from "../contexts/DragContext";
 
 interface Position {
   x: number;
@@ -21,7 +25,7 @@ interface GridItem {
   y: number;
   width: number;
   height: number;
-  potteryData: PotteryItem;
+  component: React.ReactNode;
 }
 
 export default function InfiniteImageGrid() {
@@ -30,10 +34,14 @@ export default function InfiniteImageGrid() {
   const animationFrameId = useRef<number | null>(null);
 
   // Dragging state
-  const isDragging = useRef(false);
+  const isDraggingRef = useRef(false);
+  const [isDragging, setIsDragging] = useState(false);
   const lastPosition = useRef<Position>({ x: 0, y: 0 });
   const cameraOffset = useRef<Position>({ x: 0, y: 0 });
   const targetOffset = useRef<Position>({ x: 0, y: 0 });
+
+  // Track if drag has stopped at least once
+  const [hasDragStopped, setHasDragStopped] = useState(false);
 
   // Grid settings - Dynamic sizing based on viewport
   const itemWidth = useRef(476);
@@ -74,7 +82,7 @@ export default function InfiniteImageGrid() {
 
   // Entrance animation zoom
   const [scale, setScale] = useState(0.7);
-  const [containerSize] = useState(150); // 160% to ensure coverage when zoomed out
+  const [containerSize] = useState(150); // 150% to ensure coverage when zoomed out
   const [isReady, setIsReady] = useState(false); // Don't render until dimensions calculated
   const [isLoading, setIsLoading] = useState(true); // Show loader until images preloaded
 
@@ -160,26 +168,40 @@ export default function InfiniteImageGrid() {
       // Mark as ready to render
       setIsReady(true);
 
-      // Preload initial images before showing
-      const imagesToPreload = shuffledPottery.current.slice(0, 10); // First 10 images
-      let loadedCount = 0;
+      // Preload initial images and videos before showing
+      const itemsToPreload = shuffledPottery.current.slice(0, 10); // First 10 items
 
       const preloadImage = (src: string) => {
         return new Promise((resolve) => {
           const img = new Image();
-          img.onload = () => {
-            loadedCount++;
-            resolve(true);
-          };
-          img.onerror = () => {
-            loadedCount++;
-            resolve(false);
-          };
+          img.onload = () => resolve(true);
+          img.onerror = () => resolve(false);
           img.src = src;
         });
       };
 
-      Promise.all(imagesToPreload.map(item => preloadImage(item.img))).then(() => {
+      const preloadVideo = (src: string) => {
+        return new Promise((resolve) => {
+          const video = document.createElement('video');
+          video.preload = 'metadata';
+          video.onloadeddata = () => {
+            video.remove(); // Clean up
+            resolve(true);
+          };
+          video.onerror = () => {
+            video.remove(); // Clean up
+            resolve(false);
+          };
+          video.src = src;
+        });
+      };
+
+      const preloadPromises = itemsToPreload.map(item => {
+        const itemType = item.type || 'img';
+        return itemType === 'video' ? preloadVideo(item.img) : preloadImage(item.img);
+      });
+
+      Promise.all(preloadPromises).then(() => {
         setIsLoading(false);
 
         // Entrance animation: zoom in from 0.7 to 1.0
@@ -220,13 +242,30 @@ export default function InfiniteImageGrid() {
     // Get next pottery from shuffled array
     const selectedPottery = getNextPottery();
 
+    // Create the component based on type (no dragStopTrigger prop needed - uses context)
+    const itemType = selectedPottery.type || 'img';
+    const component = itemType === 'video' ? (
+      <GridVideoContent
+        src={selectedPottery.img}
+        title={`${selectedPottery.title} by ${selectedPottery.author}`}
+        onClick={() => console.log(`Clicked: "${selectedPottery.title}" by ${selectedPottery.author} - ${selectedPottery.description}`)}
+      />
+    ) : (
+      <GridImageContent
+        src={selectedPottery.img}
+        alt={selectedPottery.title}
+        title={`${selectedPottery.title} by ${selectedPottery.author}`}
+        onClick={() => console.log(`Clicked: "${selectedPottery.title}" by ${selectedPottery.author} - ${selectedPottery.description}`)}
+      />
+    );
+
     const item: GridItem = {
       id,
       x,
       y,
       width,
       height,
-      potteryData: selectedPottery
+      component
     };
 
     // Cache the item
@@ -308,7 +347,7 @@ export default function InfiniteImageGrid() {
       // Apply momentum with hard stopping
       const momentumMagnitude = Math.abs(momentum.current.x) + Math.abs(momentum.current.y);
 
-      if (!isDragging.current && momentumMagnitude > stopThreshold) {
+      if (!isDraggingRef.current && momentumMagnitude > stopThreshold) {
         if (isMoving.current) {
           targetOffset.current.x += momentum.current.x;
           targetOffset.current.y += momentum.current.y;
@@ -341,7 +380,7 @@ export default function InfiniteImageGrid() {
 
       // Reduce target offset when within 2px to eliminate slow tail-end easing
       // Only snap when NOT dragging to allow responsive small movements
-      if (!isDragging.current && distance < 2 && distance > 0.1) {
+      if (!isDraggingRef.current && distance < 2 && distance > 0.1) {
         targetOffset.current.x = cameraOffset.current.x;
         targetOffset.current.y = cameraOffset.current.y;
       }
@@ -386,7 +425,8 @@ export default function InfiniteImageGrid() {
 
   // Mouse event handlers (same logic as original)
   const handleMouseDown = (e: React.MouseEvent) => {
-    isDragging.current = true;
+    isDraggingRef.current = true;
+    setIsDragging(true);
     lastPosition.current = { x: e.clientX, y: e.clientY };
     lastMoveTime.current = performance.now();
     isMoving.current = true;
@@ -398,7 +438,7 @@ export default function InfiniteImageGrid() {
   };
 
   const handleMouseMove = (e: React.MouseEvent) => {
-    if (!isDragging.current) return;
+    if (!isDraggingRef.current) return;
 
     const deltaX = e.clientX - lastPosition.current.x;
     const deltaY = e.clientY - lastPosition.current.y;
@@ -417,9 +457,11 @@ export default function InfiniteImageGrid() {
   };
 
   const handleMouseUp = () => {
-    if (!isDragging.current) return;
+    if (!isDraggingRef.current) return;
 
-    isDragging.current = false;
+    isDraggingRef.current = false;
+    setIsDragging(false);
+    setHasDragStopped(true); // Notify video components to upgrade
 
     // Don't reset stretch velocity - let it follow the momentum
 
@@ -434,7 +476,8 @@ export default function InfiniteImageGrid() {
   const handleTouchStart = (e: React.TouchEvent) => {
     e.preventDefault();
     if (e.touches.length === 1) {
-      isDragging.current = true;
+      isDraggingRef.current = true;
+      setIsDragging(true);
       lastPosition.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
       lastMoveTime.current = performance.now();
       isMoving.current = true;
@@ -446,7 +489,7 @@ export default function InfiniteImageGrid() {
 
   const handleTouchMove = (e: React.TouchEvent) => {
     e.preventDefault();
-    if (!isDragging.current || e.touches.length !== 1) return;
+    if (!isDraggingRef.current || e.touches.length !== 1) return;
 
     const deltaX = e.touches[0].clientX - lastPosition.current.x;
     const deltaY = e.touches[0].clientY - lastPosition.current.y;
@@ -466,9 +509,11 @@ export default function InfiniteImageGrid() {
 
   const handleTouchEnd = (e: React.TouchEvent) => {
     e.preventDefault();
-    if (!isDragging.current) return;
+    if (!isDraggingRef.current) return;
 
-    isDragging.current = false;
+    isDraggingRef.current = false;
+    setIsDragging(false);
+    setHasDragStopped(true); // Notify video components to upgrade
 
     // Don't reset stretch velocity - let it follow the momentum
 
@@ -482,7 +527,7 @@ export default function InfiniteImageGrid() {
   // Periodically check if dragging is still active
   useEffect(() => {
     const checkActivity = () => {
-      if (isDragging.current) {
+      if (isDraggingRef.current) {
         const now = performance.now();
         if (now - lastMoveTime.current > moveThreshold) {
           isMoving.current = false;
@@ -499,7 +544,7 @@ export default function InfiniteImageGrid() {
 
 
   return (
-    <>
+    <DragContext.Provider value={{ hasDragStopped, isDragging }}>
       {/* Loading screen */}
       {isLoading && (
         <div
@@ -555,53 +600,20 @@ export default function InfiniteImageGrid() {
           '--camera-y': '0px',
         } as React.CSSProperties}
       >
-        {isReady && visibleItems.map((item) => {
-          const itemType = item.potteryData.type || 'img';
-          const commonStyles = {
-            position: 'absolute' as const,
-            left: `${item.x}px`,
-            top: `${item.y}px`,
-            transform: 'translate3d(var(--camera-x, 0px), var(--camera-y, 0px), 0)',
-            width: `${item.width}px`,
-            height: `${item.height}px`,
-            objectFit: 'cover' as const,
-            display: 'block',
-            userSelect: 'none' as const,
-            pointerEvents: 'auto' as const,
-            cursor: 'pointer',
-            willChange: 'transform',
-          };
-
-          if (itemType === 'video') {
-            return (
-              <video
-                key={item.id}
-                src={item.potteryData.img}
-                title={`${item.potteryData.title} by ${item.potteryData.author}`}
-                style={commonStyles}
-                autoPlay
-                muted
-                loop
-                playsInline
-                onClick={() => console.log(`Clicked: "${item.potteryData.title}" by ${item.potteryData.author} - ${item.potteryData.description}`)}
-              />
-            );
-          }
-
-          return (
-            <img
-              key={item.id}
-              src={item.potteryData.img}
-              alt={item.potteryData.title}
-              title={`${item.potteryData.title} by ${item.potteryData.author}`}
-              style={commonStyles}
-              draggable={false}
-              onClick={() => console.log(`Clicked: "${item.potteryData.title}" by ${item.potteryData.author} - ${item.potteryData.description}`)}
-            />
-          );
-        })}
+        {isReady && visibleItems.map((item) => (
+          <GridItemContainer
+            key={item.id}
+            id={item.id}
+            x={item.x}
+            y={item.y}
+            width={item.width}
+            height={item.height}
+          >
+            {item.component}
+          </GridItemContainer>
+        ))}
       </div>
     </div>
-    </>
+    </DragContext.Provider>
   );
 }
