@@ -227,13 +227,23 @@ export default function InfiniteImageGrid() {
             const item = getItemForPosition(gridCol, gridRow);
             const pottery = item.pottery;
 
-            const src = pottery.type === 'video' && pottery.thumbnail
-              ? pottery.thumbnail
-              : pottery.img;
-
-            if (!loadedImages.has(src)) {
-              imagesToLoad.push(src);
-              loadedImages.add(src);
+            // For videos: load thumbnail first (for initial display)
+            if (pottery.type === 'video' && pottery.thumbnail) {
+              if (!loadedImages.has(pottery.thumbnail)) {
+                imagesToLoad.push(pottery.thumbnail);
+                loadedImages.add(pottery.thumbnail);
+              }
+              // Also load the video file
+              if (!loadedImages.has(pottery.img)) {
+                imagesToLoad.push(pottery.img);
+                loadedImages.add(pottery.img);
+              }
+            } else {
+              // Regular images
+              if (!loadedImages.has(pottery.img)) {
+                imagesToLoad.push(pottery.img);
+                loadedImages.add(pottery.img);
+              }
             }
           }
         }
@@ -283,15 +293,25 @@ export default function InfiniteImageGrid() {
           const allPottery = potteryData as PotteryItem[];
           const remainingImages: string[] = [];
 
-          // Collect all unique images from pottery data
+          // Collect all unique images AND videos from pottery data
           allPottery.forEach((pottery) => {
-            const src = pottery.type === 'video' && pottery.thumbnail
-              ? pottery.thumbnail
-              : pottery.img;
-
-            if (!alreadyLoaded.has(src)) {
-              remainingImages.push(src);
-              alreadyLoaded.add(src);
+            if (pottery.type === 'video') {
+              // Load thumbnail if not already loaded
+              if (pottery.thumbnail && !alreadyLoaded.has(pottery.thumbnail)) {
+                remainingImages.push(pottery.thumbnail);
+                alreadyLoaded.add(pottery.thumbnail);
+              }
+              // Load video file if not already loaded
+              if (!alreadyLoaded.has(pottery.img)) {
+                remainingImages.push(pottery.img);
+                alreadyLoaded.add(pottery.img);
+              }
+            } else {
+              // Load regular image if not already loaded
+              if (!alreadyLoaded.has(pottery.img)) {
+                remainingImages.push(pottery.img);
+                alreadyLoaded.add(pottery.img);
+              }
             }
           });
 
