@@ -13,7 +13,8 @@
       "Read(/D:\\Projects\\porto-v2\\src/**)",
       "Read(/D:\\Projects\\porto-v2/**)",
       "Read(//c/Users/FSOS/Pictures/Screenshots/**)",
-      "Bash(npm run build:*)"
+      "Bash(npm run build:*)",
+      "mcp__sequential-thinking__sequentialthinking"
     ],
     "deny": [],
     "ask": []

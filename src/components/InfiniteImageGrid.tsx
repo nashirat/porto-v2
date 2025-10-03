@@ -3,6 +3,7 @@ import potteryData from "../data/potteryData.json";
 import GridItemContainer from "./GridItemContainer";
 import GridImageContent from "./GridImageContent";
 import GridVideoContent from "./GridVideoContent";
+import Loader from "./Loader";
 import { DragContext } from "../contexts/DragContext";
 
 interface Position {
@@ -26,12 +27,13 @@ interface GridItem {
   y: number;
   width: number;
   height: number;
-  component: React.ReactNode;
+  pottery: PotteryItem; // Store data, not component
 }
 
 export default function InfiniteImageGrid() {
   // Refs for container and animation frame
   const containerRef = useRef<HTMLDivElement>(null);
+  const dragContainerRef = useRef<HTMLDivElement>(null); // Parent container for drag events
   const animationFrameId = useRef<number | null>(null);
 
   // Dragging state
@@ -69,6 +71,9 @@ export default function InfiniteImageGrid() {
   const moveThreshold = 60; // More responsive movement detection
   const stopThreshold = 0.2; // Larger threshold for even faster hard stop
 
+  // Performance optimization - dirty flag for batched updates
+  const isDirty = useRef(false);
+  const lastUpdateTime = useRef(0);
 
   // Store display info
   const displayInfoRef = useRef({
@@ -84,18 +89,17 @@ export default function InfiniteImageGrid() {
   const shuffledPottery = useRef<PotteryItem[]>([]);
   const potteryIndex = useRef(0);
 
-  // Entrance animation zoom
-  const [scale, setScale] = useState(0.7);
-  const [containerSize] = useState(150); // 150% to ensure coverage when zoomed out
+  const [containerSize] = useState(100); // 100% viewport size
   const [isReady, setIsReady] = useState(false); // Don't render until dimensions calculated
   const [isLoading, setIsLoading] = useState(true); // Show loader until images preloaded
+  const [loadingProgress, setLoadingProgress] = useState(0); // Loading percentage
 
-  // Update visible items when scale changes
+  // Update visible items when ready
   useEffect(() => {
     if (isReady) {
       updateVisibleItems();
     }
-  }, [scale, isReady]);
+  }, [isReady]);
 
   // Calculate responsive dimensions based on viewport
   const calculateDimensions = (viewportHeight: number, viewportWidth: number) => {
@@ -118,10 +122,10 @@ export default function InfiniteImageGrid() {
       // gap = cardHeight × 0.320
       // 2×cardHeight + cardHeight×0.320 + 0.1×cardHeight = viewportHeight
       // cardHeight × (2 + 0.320 + 0.1) = viewportHeight
-      const cardHeight = viewportHeight / 2.300;
+      const cardHeight = viewportHeight / 2.500;
 
       itemHeight.current = cardHeight;
-      gapY.current = cardHeight * 0.350;
+      gapY.current = cardHeight * 0.320;
       gapX.current = gapY.current;
       itemWidth.current = cardHeight * (476 / 593);
     }
@@ -168,18 +172,16 @@ export default function InfiniteImageGrid() {
       calculateDimensions(window.innerHeight, window.innerWidth);
 
       displayInfoRef.current = {
-        width: window.innerWidth * (containerSize / 100),
-        height: window.innerHeight * (containerSize / 100),
+        width: window.innerWidth,
+        height: window.innerHeight,
       };
 
       // Initialize shuffled pottery array
       shuffledPottery.current = shuffleArray(potteryData as PotteryItem[]);
 
       // Center the first card on initial load, compensating for zig-zag offset
-      const actualWidth = window.innerWidth * (containerSize / 100);
-      const actualHeight = window.innerHeight * (containerSize / 100);
-      const centerX = (actualWidth/2) - (itemWidth.current / 2);
-      const centerY = (actualHeight/2) - (itemHeight.current / 2) - getZigzagOffset();
+      const centerX = (window.innerWidth / 2) - (itemWidth.current / 2);
+      const centerY = (window.innerHeight / 2) - (itemHeight.current / 2) - getZigzagOffset();
       cameraOffset.current = { x: centerX, y: centerY };
       targetOffset.current = { x: centerX, y: centerY };
 
@@ -188,47 +190,19 @@ export default function InfiniteImageGrid() {
       // Mark as ready to render
       setIsReady(true);
 
-      // Preload initial images and videos before showing
-      const itemsToPreload = shuffledPottery.current.slice(0, 10); // First 10 items
+      // Simulate loading progress - 5% increments over 2 seconds
+      let progress = 0;
+      const interval = setInterval(() => {
+        progress += 5;
+        setLoadingProgress(progress);
 
-      const preloadImage = (src: string) => {
-        return new Promise((resolve) => {
-          const img = new Image();
-          img.onload = () => resolve(true);
-          img.onerror = () => resolve(false);
-          img.src = src;
-        });
-      };
-
-      const preloadVideo = (src: string) => {
-        return new Promise((resolve) => {
-          const video = document.createElement('video');
-          video.preload = 'metadata';
-          video.onloadeddata = () => {
-            video.remove(); // Clean up
-            resolve(true);
-          };
-          video.onerror = () => {
-            video.remove(); // Clean up
-            resolve(false);
-          };
-          video.src = src;
-        });
-      };
-
-      const preloadPromises = itemsToPreload.map(item => {
-        const itemType = item.type || 'img';
-        return itemType === 'video' ? preloadVideo(item.img) : preloadImage(item.img);
-      });
-
-      Promise.all(preloadPromises).then(() => {
-        setIsLoading(false);
-
-        // Entrance animation: zoom in from 0.7 to 1.0
-        setTimeout(() => {
-          setScale(1);
-        }, 100);
-      });
+        if (progress >= 100) {
+          clearInterval(interval);
+          setTimeout(() => {
+            setIsLoading(false);
+          }, 200);
+        }
+      }, 100);
     }
 
     return () => {
@@ -262,31 +236,14 @@ export default function InfiniteImageGrid() {
     // Get next pottery from shuffled array
     const selectedPottery = getNextPottery();
 
-    // Create the component based on type (no dragStopTrigger prop needed - uses context)
-    const itemType = selectedPottery.type || 'img';
-    const component = itemType === 'video' ? (
-      <GridVideoContent
-        src={selectedPottery.img}
-        thumbnail={selectedPottery.thumbnail!}
-        title={`${selectedPottery.title} by ${selectedPottery.author}`}
-        onClick={() => console.log(`Clicked: "${selectedPottery.title}" by ${selectedPottery.author} - ${selectedPottery.description}`)}
-      />
-    ) : (
-      <GridImageContent
-        src={selectedPottery.img}
-        alt={selectedPottery.title}
-        title={`${selectedPottery.title} by ${selectedPottery.author}`}
-        onClick={() => console.log(`Clicked: "${selectedPottery.title}" by ${selectedPottery.author} - ${selectedPottery.description}`)}
-      />
-    );
-
+    // Store data only, not component (components created during render)
     const item: GridItem = {
       id,
       x,
       y,
       width,
       height,
-      component
+      pottery: selectedPottery
     };
 
     // Cache the item
@@ -299,19 +256,15 @@ export default function InfiniteImageGrid() {
     const { width, height } = displayInfoRef.current;
     const buffer = 500;
 
-    // Account for scale - when zoomed out, we see more area
-    const effectiveWidth = width / scale;
-    const effectiveHeight = height / scale;
-
     // Calculate viewport bounds
     const cameraX = -cameraOffset.current.x;
     const cameraY = -cameraOffset.current.y;
 
     // Calculate which grid positions are visible
     const minGridCol = Math.floor((cameraX - buffer) / getItemSpacingX());
-    const maxGridCol = Math.ceil((cameraX + effectiveWidth + buffer) / getItemSpacingX());
+    const maxGridCol = Math.ceil((cameraX + width + buffer) / getItemSpacingX());
     const minGridRow = Math.floor((cameraY - buffer) / getItemSpacingY());
-    const maxGridRow = Math.ceil((cameraY + effectiveHeight + buffer) / getItemSpacingY());
+    const maxGridRow = Math.ceil((cameraY + height + buffer) / getItemSpacingY());
 
     // Generate visible items
     const visible: GridItem[] = [];
@@ -319,19 +272,33 @@ export default function InfiniteImageGrid() {
       for (let gridCol = minGridCol; gridCol <= maxGridCol; gridCol++) {
         const item = getItemForPosition(gridCol, gridRow);
 
-        // Double-check visibility (accounting for zigzag offset and scale)
+        // Double-check visibility (accounting for zigzag offset)
         if (
           item.x + item.width >= cameraX - buffer &&
-          item.x <= cameraX + effectiveWidth + buffer &&
+          item.x <= cameraX + width + buffer &&
           item.y + item.height >= cameraY - buffer &&
-          item.y <= cameraY + effectiveHeight + buffer
+          item.y <= cameraY + height + buffer
         ) {
           visible.push(item);
         }
       }
     }
 
-    setVisibleItems(visible);
+    // Only update if count changed or items are different
+    setVisibleItems(prev => {
+      if (prev.length !== visible.length) return visible;
+
+      // Quick check: compare first/last item object references
+      // This catches both position changes AND regenerated items with same IDs
+      if (prev.length > 0 && visible.length > 0) {
+        if (prev[0] !== visible[0] ||
+            prev[prev.length - 1] !== visible[visible.length - 1]) {
+          return visible;
+        }
+      }
+
+      return prev; // No change, prevent re-render
+    });
   };
 
   // Initialize with correct size and start animation
@@ -343,8 +310,8 @@ export default function InfiniteImageGrid() {
       calculateDimensions(window.innerHeight, window.innerWidth);
 
       displayInfoRef.current = {
-        width: window.innerWidth * (containerSize / 100),
-        height: window.innerHeight * (containerSize / 100),
+        width: window.innerWidth,
+        height: window.innerHeight,
       };
       updateVisibleItems();
     };
@@ -420,15 +387,23 @@ export default function InfiniteImageGrid() {
       cameraOffset.current.x += (targetOffset.current.x - cameraOffset.current.x) * dynamicSmoothing;
       cameraOffset.current.y += (targetOffset.current.y - cameraOffset.current.y) * dynamicSmoothing;
 
-      // Update CSS variables for GPU-accelerated transforms
+      // Direct transform for better performance (no CSS custom property recalc)
       if (containerRef.current) {
-        containerRef.current.style.setProperty('--camera-x', `${cameraOffset.current.x}px`);
-        containerRef.current.style.setProperty('--camera-y', `${cameraOffset.current.y}px`);
+        containerRef.current.style.transform =
+          `translate3d(${cameraOffset.current.x}px, ${cameraOffset.current.y}px, 0)`;
       }
 
-      // Update visible items when camera moves significantly
-      if (Math.abs(distance) > 200) {
+      // Mark dirty when camera moves significantly, but throttle to max once per 100ms
+      const now = performance.now();
+      if (Math.abs(distance) > 200 && now - lastUpdateTime.current > 100) {
+        isDirty.current = true;
+        lastUpdateTime.current = now;
+      }
+
+      // Batched update: only call updateVisibleItems when dirty flag is set
+      if (isDirty.current) {
         updateVisibleItems();
+        isDirty.current = false;
       }
 
       animationFrameId.current = requestAnimationFrame(animate);
@@ -503,9 +478,10 @@ export default function InfiniteImageGrid() {
     }
   };
 
-  // Touch event handlers (same logic as original)
-  const handleTouchStart = (e: React.TouchEvent) => {
-    e.preventDefault();
+  // Native touch event handlers for better performance
+  // Note: These are NOT React synthetic events, used via addEventListener
+  const handleTouchStartNative = (e: TouchEvent) => {
+    // Don't preventDefault here - let children receive touch events for clicks
     if (e.touches.length === 1) {
       isDraggingRef.current = true;
       setIsDragging(true);
@@ -513,22 +489,21 @@ export default function InfiniteImageGrid() {
       lastPosition.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
       lastMoveTime.current = performance.now();
       isMoving.current = true;
-
-      // Don't reset velocity - let it transition smoothly from existing momentum
-      // velocityHistory.current = Array(velocityHistorySize).fill({ x: 0, y: 0 });
     }
   };
 
-  const handleTouchMove = (e: React.TouchEvent) => {
-    e.preventDefault();
+  const handleTouchMoveNative = (e: TouchEvent) => {
     if (!isDraggingRef.current || e.touches.length !== 1) return;
 
     const deltaX = e.touches[0].clientX - lastPosition.current.x;
     const deltaY = e.touches[0].clientY - lastPosition.current.y;
 
     if (deltaX !== 0 || deltaY !== 0) {
-      // Touch devices: 1.5x faster drag speed
-      const touchMultiplier = 1.5;
+      // preventDefault only when actually dragging - this allows clicks to work
+      e.preventDefault();
+
+      // Touch devices: 1.5x faster drag speed for better UX
+      const touchMultiplier = 1.8;
       targetOffset.current.x += deltaX * touchMultiplier;
       targetOffset.current.y += deltaY * touchMultiplier;
 
@@ -540,15 +515,12 @@ export default function InfiniteImageGrid() {
     }
   };
 
-  const handleTouchEnd = (e: React.TouchEvent) => {
-    e.preventDefault();
+  const handleTouchEndNative = () => {
+    // No preventDefault needed on touchEnd - optimization
     if (!isDraggingRef.current) return;
 
     isDraggingRef.current = false;
     setIsDragging(false);
-    // Don't set hasDragStopped here - wait for momentum to actually stop in animation loop
-
-    // Don't reset stretch velocity - let it follow the momentum
 
     const now = performance.now();
     if (now - lastMoveTime.current > moveThreshold) {
@@ -556,6 +528,25 @@ export default function InfiniteImageGrid() {
       momentum.current = { x: 0, y: 0 };
     }
   };
+
+  // Attach native touch event listeners with explicit passive: false
+  useEffect(() => {
+    const container = dragContainerRef.current;
+    if (!container) return;
+
+    // passive: false tells browser we WILL preventDefault, allowing optimization
+    const options = { passive: false };
+
+    container.addEventListener('touchstart', handleTouchStartNative, options);
+    container.addEventListener('touchmove', handleTouchMoveNative, options);
+    container.addEventListener('touchend', handleTouchEndNative); // No passive needed, no preventDefault
+
+    return () => {
+      container.removeEventListener('touchstart', handleTouchStartNative);
+      container.removeEventListener('touchmove', handleTouchMoveNative);
+      container.removeEventListener('touchend', handleTouchEndNative);
+    };
+  }, []); // Empty deps - handlers use refs, no recreation needed
 
   // Periodically check if dragging is still active
   useEffect(() => {
@@ -579,50 +570,24 @@ export default function InfiniteImageGrid() {
   return (
     <DragContext.Provider value={{ gridStopped, isDragging, clickedItemId, setClickedItemId }}>
       {/* Loading screen */}
-      {isLoading && (
-        <div
-          style={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            width: '100%',
-            height: '100vh',
-            backgroundColor: '#000000',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 9999,
-          }}
-        >
-          <div style={{ color: '#ffffff', fontSize: '18px', fontFamily: 'system-ui, sans-serif' }}>
-            Loading...
-          </div>
-        </div>
-      )}
+      {isLoading && <Loader progress={loadingProgress} />}
 
       {/* Main container */}
       <div
+        ref={dragContainerRef}
         style={{
-          width: `${containerSize}%`,
-          height: `${containerSize}vh`,
+          width: '100%',
+          height: '100vh',
           overflow: 'hidden',
           backgroundColor: '#f9f9f9',
           position: 'relative',
           touchAction: 'none',
-          transform: `scale(${scale})`,
-          transformOrigin: '50% 50%',
-          transition: 'transform 1.2s cubic-bezier(0.4, 0, 0.2, 1)',
-          left: `${-(containerSize - 100) / 2}%`,
-          top: `${-(containerSize - 100) / 2}vh`,
           cursor: isDragging ? 'grabbing' : 'grab',
         }}
         onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
         onMouseLeave={handleMouseUp}
-        onTouchStart={handleTouchStart}
-        onTouchMove={handleTouchMove}
-        onTouchEnd={handleTouchEnd}
       >
       <div
         ref={containerRef}
@@ -630,22 +595,38 @@ export default function InfiniteImageGrid() {
           position: 'absolute',
           top: 0,
           left: 0,
-          '--camera-x': '0px',
-          '--camera-y': '0px',
-        } as React.CSSProperties}
+        }}
       >
-        {isReady && visibleItems.map((item) => (
-          <GridItemContainer
-            key={item.id}
-            id={item.id}
-            x={item.x}
-            y={item.y}
-            width={item.width}
-            height={item.height}
-          >
-            {item.component}
-          </GridItemContainer>
-        ))}
+        {isReady && visibleItems.map((item) => {
+          const itemType = item.pottery.type || 'img';
+
+          return (
+            <GridItemContainer
+              key={item.id}
+              id={item.id}
+              x={item.x}
+              y={item.y}
+              width={item.width}
+              height={item.height}
+            >
+              {itemType === 'video' ? (
+                <GridVideoContent
+                  src={item.pottery.img}
+                  thumbnail={item.pottery.thumbnail!}
+                  title={`${item.pottery.title} by ${item.pottery.author}`}
+                  onClick={() => console.log(`Clicked: "${item.pottery.title}" by ${item.pottery.author} - ${item.pottery.description}`)}
+                />
+              ) : (
+                <GridImageContent
+                  src={item.pottery.img}
+                  alt={item.pottery.title}
+                  title={`${item.pottery.title} by ${item.pottery.author}`}
+                  onClick={() => console.log(`Clicked: "${item.pottery.title}" by ${item.pottery.author} - ${item.pottery.description}`)}
+                />
+              )}
+            </GridItemContainer>
+          );
+        })}
       </div>
     </div>
     </DragContext.Provider>
