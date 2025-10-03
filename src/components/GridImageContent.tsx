@@ -8,6 +8,11 @@ interface GridImageContentProps {
 }
 
 function GridImageContent({ src, alt, title, onClick }: GridImageContentProps) {
+  const handleTouch = (e: React.TouchEvent) => {
+    e.stopPropagation();
+    if (onClick) onClick();
+  };
+
   return (
     <img
       src={src}
@@ -24,6 +29,7 @@ function GridImageContent({ src, alt, title, onClick }: GridImageContentProps) {
       }}
       draggable={false}
       onClick={onClick}
+      onTouchEnd={handleTouch}
     />
   );
 }

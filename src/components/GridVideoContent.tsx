@@ -37,6 +37,11 @@ function GridVideoContent({ src, thumbnail, title, onClick }: GridVideoContentPr
     }
   }, [showVideo, hideImage]);
 
+  const handleTouch = (e: React.TouchEvent) => {
+    e.stopPropagation();
+    if (onClick) onClick();
+  };
+
   const commonStyles = {
     width: '100%',
     height: '100%',
@@ -62,6 +67,7 @@ function GridVideoContent({ src, thumbnail, title, onClick }: GridVideoContentPr
           }}
           draggable={false}
           onClick={onClick}
+          onTouchEnd={handleTouch}
         />
       )}
       {showVideo && (
@@ -82,6 +88,7 @@ function GridVideoContent({ src, thumbnail, title, onClick }: GridVideoContentPr
           loop
           playsInline
           onClick={onClick}
+          onTouchEnd={handleTouch}
         />
       )}
     </div>

@@ -81,6 +81,11 @@ function GridItemContainer({
     }
   };
 
+  const handleOverlayTouch = (e: React.TouchEvent) => {
+    e.stopPropagation();
+    handleOverlayClick();
+  };
+
   const preventDrag = (e: React.MouseEvent | React.TouchEvent) => {
     e.preventDefault();
     e.stopPropagation();
@@ -140,12 +145,12 @@ function GridItemContainer({
             transition: 'background-color 0.5s cubic-bezier(0.4, 0, 0.2, 1)',
           }}
           onClick={handleOverlayClick}
+          onTouchEnd={handleOverlayTouch}
           onMouseDown={preventDrag}
           onMouseMove={preventDrag}
           onMouseUp={preventDrag}
           onTouchStart={preventDrag}
           onTouchMove={preventDrag}
-          onTouchEnd={preventDrag}
         />
         {/* Item */}
         <div

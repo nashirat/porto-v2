@@ -489,6 +489,12 @@ export default function InfiniteImageGrid() {
 
   // Touch event handlers (same logic as original)
   const handleTouchStart = (e: React.TouchEvent) => {
+    // Don't prevent default if touch started on an img or video (allow clicks on items)
+    const target = e.target as HTMLElement;
+    if (target.tagName === 'IMG' || target.tagName === 'VIDEO') {
+      return;
+    }
+
     e.preventDefault();
     if (e.touches.length === 1) {
       isDraggingRef.current = true;
@@ -511,11 +517,12 @@ export default function InfiniteImageGrid() {
     const deltaY = e.touches[0].clientY - lastPosition.current.y;
 
     if (deltaX !== 0 || deltaY !== 0) {
-      targetOffset.current.x += deltaX;
-      targetOffset.current.y += deltaY;
+      // Touch devices: 1.5x faster drag speed
+      const touchMultiplier = 1.5;
+      targetOffset.current.x += deltaX * touchMultiplier;
+      targetOffset.current.y += deltaY * touchMultiplier;
 
-
-      updateVelocity(deltaX, deltaY);
+      updateVelocity(deltaX * touchMultiplier, deltaY * touchMultiplier);
 
       lastPosition.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
       lastMoveTime.current = performance.now();
