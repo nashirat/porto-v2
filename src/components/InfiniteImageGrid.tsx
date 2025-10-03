@@ -89,7 +89,6 @@ export default function InfiniteImageGrid() {
   const shuffledPottery = useRef<PotteryItem[]>([]);
   const potteryIndex = useRef(0);
 
-  const [containerSize] = useState(100); // 100% viewport size
   const [isReady, setIsReady] = useState(false); // Don't render until dimensions calculated
   const [isLoading, setIsLoading] = useState(true); // Show loader until images preloaded
   const [loadingProgress, setLoadingProgress] = useState(0); // Loading percentage
