@@ -98,17 +98,33 @@ export default function InfiniteImageGrid() {
   }, [scale, isReady]);
 
   // Calculate responsive dimensions based on viewport
-  const calculateDimensions = (viewportHeight: number) => {
-    // Formula: 2 cards + 1 gap + 10% card height = viewportHeight
-    // Since gap = cardHeight × 0.320 (190/573 ratio - 30px smaller than original 220)
-    // 2×cardHeight + cardHeight×0.320 + 0.1×cardHeight = viewportHeight
-    // cardHeight × (2 + 0.320 + 0.1) = viewportHeight
-    const cardHeight = viewportHeight / 2.300;
+  const calculateDimensions = (viewportHeight: number, viewportWidth: number) => {
+    const isMobile = viewportWidth <= 768;
 
-    itemHeight.current = cardHeight;
-    gapY.current = cardHeight * 0.350;
-    gapX.current = gapY.current; // Keep square gaps
-    itemWidth.current = cardHeight * (476 / 593); // Maintain aspect ratio (20px smaller height)
+    if (isMobile) {
+      // Mobile: 3.5 cards visible with smaller gaps
+      // Formula: 3.5×cardHeight + 2.5×gap = viewportHeight
+      // Using smaller gap ratio for mobile: gap = cardHeight × 0.15
+      // 3.5×cardHeight + 2.5×(cardHeight×0.15) = viewportHeight
+      // cardHeight × (3.5 + 0.375) = viewportHeight
+      const cardHeight = viewportHeight / 4.0;
+
+      itemHeight.current = cardHeight;
+      gapY.current = cardHeight * 0.25; // Smaller gap for mobile
+      gapX.current = gapY.current;
+      itemWidth.current = cardHeight * (476 / 593);
+    } else {
+      // Desktop: 2 cards + 1 gap + 10% card height = viewportHeight
+      // gap = cardHeight × 0.320
+      // 2×cardHeight + cardHeight×0.320 + 0.1×cardHeight = viewportHeight
+      // cardHeight × (2 + 0.320 + 0.1) = viewportHeight
+      const cardHeight = viewportHeight / 2.300;
+
+      itemHeight.current = cardHeight;
+      gapY.current = cardHeight * 0.350;
+      gapX.current = gapY.current;
+      itemWidth.current = cardHeight * (476 / 593);
+    }
 
     // Clear cached grid items since dimensions changed
     stableGrid.current.clear();
@@ -149,7 +165,7 @@ export default function InfiniteImageGrid() {
       document.body.style.overflow = 'hidden';
 
       // Calculate dimensions FIRST before any rendering
-      calculateDimensions(window.innerHeight);
+      calculateDimensions(window.innerHeight, window.innerWidth);
 
       displayInfoRef.current = {
         width: window.innerWidth * (containerSize / 100),
@@ -324,7 +340,7 @@ export default function InfiniteImageGrid() {
 
     const handleResize = () => {
       // Recalculate dimensions on resize
-      calculateDimensions(window.innerHeight);
+      calculateDimensions(window.innerHeight, window.innerWidth);
 
       displayInfoRef.current = {
         width: window.innerWidth * (containerSize / 100),
@@ -489,12 +505,6 @@ export default function InfiniteImageGrid() {
 
   // Touch event handlers (same logic as original)
   const handleTouchStart = (e: React.TouchEvent) => {
-    // Don't prevent default if touch started on an img or video (allow clicks on items)
-    const target = e.target as HTMLElement;
-    if (target.tagName === 'IMG' || target.tagName === 'VIDEO') {
-      return;
-    }
-
     e.preventDefault();
     if (e.touches.length === 1) {
       isDraggingRef.current = true;

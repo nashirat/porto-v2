@@ -92,6 +92,8 @@ function GridItemContainer({
   };
 
   if (isFixed && fixedRect) {
+    const isMobile = window.innerWidth <= 768;
+
     // Add 25% offset to compensate for the grid container's left: -25%
     const offsetX = window.innerWidth * 0.25;
     const offsetY = window.innerHeight * 0.25;
@@ -131,14 +133,14 @@ function GridItemContainer({
             pointerEvents: 'none',
           }}
         />
-        {/* Overlay */}
+        {/* Overlay - Full-screen for mobile, offset for desktop */}
         <div
           style={{
             position: 'fixed',
-            top: `${offsetY - window.innerHeight * 0.02}px`,
+            top: isMobile ? `${offsetY}px` : `${offsetY - window.innerHeight * 0.02}px`,
             left: `${offsetX}px`,
-            width: '110vw',
-            height: '110vh',
+            width: isMobile ? '100vw' : '110vw',
+            height: isMobile ? '100vh' : '110vh',
             backgroundColor: isAnimating ? 'rgba(172, 174, 177, 0.92)' : 'rgba(172, 174, 177, 0)',
             zIndex: 999,
             pointerEvents: 'auto',
