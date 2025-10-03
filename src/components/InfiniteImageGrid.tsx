@@ -5,6 +5,7 @@ import GridImageContent from "./GridImageContent";
 import GridVideoContent from "./GridVideoContent";
 import Loader from "./Loader";
 import { DragContext } from "../contexts/DragContext";
+import { USE_SIMULATED_LOADING } from "../constants";
 
 interface Position {
   x: number;
@@ -189,19 +190,122 @@ export default function InfiniteImageGrid() {
       // Mark as ready to render
       setIsReady(true);
 
-      // Simulate loading progress - 5% increments over 2 seconds
-      let progress = 0;
-      const interval = setInterval(() => {
-        progress += 5;
-        setLoadingProgress(progress);
+      if (USE_SIMULATED_LOADING) {
+        // Simulate loading progress - 5% increments over 2 seconds (for testing)
+        let progress = 0;
+        const interval = setInterval(() => {
+          progress += 5;
+          setLoadingProgress(progress);
 
-        if (progress >= 100) {
-          clearInterval(interval);
-          setTimeout(() => {
-            setIsLoading(false);
-          }, 200);
+          if (progress >= 100) {
+            clearInterval(interval);
+            setTimeout(() => {
+              setIsLoading(false);
+            }, 200);
+          }
+        }, 100);
+      } else {
+        // Real loading - progressive strategy to avoid pop-ins
+        const loadedImages = new Set<string>(); // Track loaded images
+
+        // PHASE 1: Preload initial visible + large buffer (prevent pop-ins during first drags)
+        const imagesToLoad: string[] = [];
+
+        const { width, height } = displayInfoRef.current;
+        const initialBuffer = 1500; // Large buffer to cover initial drag area
+        const cameraX = -cameraOffset.current.x;
+        const cameraY = -cameraOffset.current.y;
+
+        const minGridCol = Math.floor((cameraX - initialBuffer) / getItemSpacingX());
+        const maxGridCol = Math.ceil((cameraX + width + initialBuffer) / getItemSpacingX());
+        const minGridRow = Math.floor((cameraY - initialBuffer) / getItemSpacingY());
+        const maxGridRow = Math.ceil((cameraY + height + initialBuffer) / getItemSpacingY());
+
+        // Collect images in initial buffer zone
+        for (let gridRow = minGridRow; gridRow <= maxGridRow; gridRow++) {
+          for (let gridCol = minGridCol; gridCol <= maxGridCol; gridCol++) {
+            const item = getItemForPosition(gridCol, gridRow);
+            const pottery = item.pottery;
+
+            const src = pottery.type === 'video' && pottery.thumbnail
+              ? pottery.thumbnail
+              : pottery.img;
+
+            if (!loadedImages.has(src)) {
+              imagesToLoad.push(src);
+              loadedImages.add(src);
+            }
+          }
         }
-      }, 100);
+
+        let loadedCount = 0;
+        const initialTotal = imagesToLoad.length;
+
+        if (initialTotal === 0) {
+          setLoadingProgress(100);
+          setIsLoading(false);
+          return;
+        }
+
+        // Preload initial images with progress tracking
+        imagesToLoad.forEach((src) => {
+          const img = new Image();
+          img.onload = () => {
+            loadedCount++;
+            const progress = Math.round((loadedCount / initialTotal) * 100);
+            setLoadingProgress(progress);
+
+            if (loadedCount === initialTotal) {
+              setTimeout(() => {
+                setIsLoading(false);
+                // PHASE 2: Start background loading of ALL remaining images
+                loadRemainingImagesInBackground(loadedImages);
+              }, 200);
+            }
+          };
+          img.onerror = () => {
+            loadedCount++;
+            const progress = Math.round((loadedCount / initialTotal) * 100);
+            setLoadingProgress(progress);
+
+            if (loadedCount === initialTotal) {
+              setTimeout(() => {
+                setIsLoading(false);
+                loadRemainingImagesInBackground(loadedImages);
+              }, 200);
+            }
+          };
+          img.src = src;
+        });
+
+        // Background loading function
+        function loadRemainingImagesInBackground(alreadyLoaded: Set<string>) {
+          const allPottery = potteryData as PotteryItem[];
+          const remainingImages: string[] = [];
+
+          // Collect all unique images from pottery data
+          allPottery.forEach((pottery) => {
+            const src = pottery.type === 'video' && pottery.thumbnail
+              ? pottery.thumbnail
+              : pottery.img;
+
+            if (!alreadyLoaded.has(src)) {
+              remainingImages.push(src);
+              alreadyLoaded.add(src);
+            }
+          });
+
+          // Load remaining images in background (no progress tracking, no blocking)
+          remainingImages.forEach((src, index) => {
+            // Stagger loading to avoid blocking - load one every 100ms
+            setTimeout(() => {
+              const img = new Image();
+              img.src = src;
+              // No error handling needed - just fire and forget
+            }, index * 100);
+          });
+        }
+      }
     }
 
     return () => {
