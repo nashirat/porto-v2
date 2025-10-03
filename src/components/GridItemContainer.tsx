@@ -168,8 +168,8 @@ function GridItemContainer({
 
     if (isAnimating) {
       // Centered and scaled to 160%
-      const targetWidth = fixedRect.width * 1.7;
-      const targetHeight = fixedRect.height * 1.7;
+      const targetWidth = fixedRect.width * 2;
+      const targetHeight = fixedRect.height * 2;
       itemLeft = (window.innerWidth - targetWidth) / 2;
       itemTop = (window.innerHeight - targetHeight) / 2;
       itemWidth = targetWidth;

@@ -6,6 +6,7 @@ import GridVideoContent from "./GridVideoContent";
 import Loader from "./Loader";
 import { DragContext } from "../contexts/DragContext";
 import { USE_SIMULATED_LOADING } from "../constants";
+import { GRID_CONFIG } from "../config/gridConfig";
 
 interface Position {
   x: number;
@@ -58,9 +59,9 @@ export default function InfiniteImageGrid() {
 
   // Animation and physics - very fast stopping behavior
   const momentum = useRef<Position>({ x: 0, y: 0 });
-  const damping = 0.92; // Much stronger damping for very fast stop
-  const momentumStrength = 0.10; // Much less momentum
-  const smoothingFactor = 0.02;
+  const damping = GRID_CONFIG.physics.damping;
+  const momentumStrength = GRID_CONFIG.physics.momentumStrength;
+  const smoothingFactor = GRID_CONFIG.physics.smoothingFactor;
 
   // Store last 3 velocities as separate refs (unrolled for performance)
   const vel0 = useRef<Position>({ x: 0, y: 0 }); // Most recent
@@ -69,8 +70,8 @@ export default function InfiniteImageGrid() {
 
   const isMoving = useRef(false);
   const lastMoveTime = useRef(0);
-  const moveThreshold = 60; // More responsive movement detection
-  const stopThreshold = 0.2; // Larger threshold for even faster hard stop
+  const moveThreshold = GRID_CONFIG.interaction.moveThreshold;
+  const stopThreshold = GRID_CONFIG.physics.stopThreshold;
 
   // Performance optimization - dirty flag for batched updates
   const isDirty = useRef(false);
@@ -103,31 +104,22 @@ export default function InfiniteImageGrid() {
 
   // Calculate responsive dimensions based on viewport
   const calculateDimensions = (viewportHeight: number, viewportWidth: number) => {
-    const isMobile = viewportWidth <= 768;
+    const isMobile = viewportWidth <= GRID_CONFIG.mobile.breakpoint;
 
     if (isMobile) {
-      // Mobile: 3.5 cards visible with smaller gaps
-      // Formula: 3.5×cardHeight + 2.5×gap = viewportHeight
-      // Using smaller gap ratio for mobile: gap = cardHeight × 0.15
-      // 3.5×cardHeight + 2.5×(cardHeight×0.15) = viewportHeight
-      // cardHeight × (3.5 + 0.375) = viewportHeight
-      const cardHeight = viewportHeight / 4.0;
+      const cardHeight = viewportHeight / GRID_CONFIG.mobile.cardHeightDivisor;
 
       itemHeight.current = cardHeight;
-      gapY.current = cardHeight * 0.25; // Smaller gap for mobile
+      gapY.current = cardHeight * GRID_CONFIG.mobile.gapRatio;
       gapX.current = gapY.current;
-      itemWidth.current = cardHeight * (476 / 593);
+      itemWidth.current = cardHeight * GRID_CONFIG.desktop.aspectRatio;
     } else {
-      // Desktop: 2 cards + 1 gap + 10% card height = viewportHeight
-      // gap = cardHeight × 0.320
-      // 2×cardHeight + cardHeight×0.320 + 0.1×cardHeight = viewportHeight
-      // cardHeight × (2 + 0.320 + 0.1) = viewportHeight
-      const cardHeight = viewportHeight / 2.500;
+      const cardHeight = viewportHeight / GRID_CONFIG.desktop.cardHeightDivisor;
 
       itemHeight.current = cardHeight;
-      gapY.current = cardHeight * 0.320;
+      gapY.current = cardHeight * GRID_CONFIG.desktop.gapRatio;
       gapX.current = gapY.current;
-      itemWidth.current = cardHeight * (476 / 593);
+      itemWidth.current = cardHeight * GRID_CONFIG.desktop.aspectRatio;
     }
 
     // Clear cached grid items since dimensions changed
@@ -137,7 +129,7 @@ export default function InfiniteImageGrid() {
   // Grid layout settings (calculated dynamically)
   const getItemSpacingX = () => itemWidth.current + gapX.current;
   const getItemSpacingY = () => itemHeight.current + gapY.current;
-  const getZigzagOffset = () => getItemSpacingY() * 0.5;
+  const getZigzagOffset = () => getItemSpacingY() * GRID_CONFIG.pattern.zigzagOffsetRatio;
 
   // Shuffle array using Fisher-Yates algorithm
   const shuffleArray = <T,>(array: T[]): T[] => {
@@ -191,19 +183,19 @@ export default function InfiniteImageGrid() {
       setIsReady(true);
 
       if (USE_SIMULATED_LOADING) {
-        // Simulate loading progress - 5% increments over 2 seconds (for testing)
+        // Simulate loading progress (for testing)
         let progress = 0;
         const interval = setInterval(() => {
-          progress += 5;
+          progress += GRID_CONFIG.loading.simulatedIncrement;
           setLoadingProgress(progress);
 
           if (progress >= 100) {
             clearInterval(interval);
             setTimeout(() => {
               setIsLoading(false);
-            }, 200);
+            }, GRID_CONFIG.loading.fadeOutDelay);
           }
-        }, 100);
+        }, GRID_CONFIG.loading.simulatedInterval);
       } else {
         // Real loading - progressive strategy to avoid pop-ins
         const loadedImages = new Set<string>(); // Track loaded images
@@ -212,7 +204,7 @@ export default function InfiniteImageGrid() {
         const imagesToLoad: string[] = [];
 
         const { width, height } = displayInfoRef.current;
-        const initialBuffer = 1500; // Large buffer to cover initial drag area
+        const initialBuffer = GRID_CONFIG.rendering.initialBuffer;
         const cameraX = -cameraOffset.current.x;
         const cameraY = -cameraOffset.current.y;
 
@@ -270,7 +262,7 @@ export default function InfiniteImageGrid() {
                 setIsLoading(false);
                 // PHASE 2: Start background loading of ALL remaining images
                 loadRemainingImagesInBackground(loadedImages);
-              }, 200);
+              }, GRID_CONFIG.loading.fadeOutDelay);
             }
           };
           img.onerror = () => {
@@ -282,7 +274,7 @@ export default function InfiniteImageGrid() {
               setTimeout(() => {
                 setIsLoading(false);
                 loadRemainingImagesInBackground(loadedImages);
-              }, 200);
+              }, GRID_CONFIG.loading.fadeOutDelay);
             }
           };
           img.src = src;
@@ -317,12 +309,12 @@ export default function InfiniteImageGrid() {
 
           // Load remaining images in background (no progress tracking, no blocking)
           remainingImages.forEach((src, index) => {
-            // Stagger loading to avoid blocking - load one every 100ms
+            // Stagger loading to avoid blocking
             setTimeout(() => {
               const img = new Image();
               img.src = src;
               // No error handling needed - just fire and forget
-            }, index * 100);
+            }, index * GRID_CONFIG.loading.backgroundLoadStagger);
           });
         }
       }
@@ -377,7 +369,7 @@ export default function InfiniteImageGrid() {
   // Update visible items based on camera position
   const updateVisibleItems = () => {
     const { width, height } = displayInfoRef.current;
-    const buffer = 500;
+    const buffer = GRID_CONFIG.rendering.visibleBuffer;
 
     // Calculate viewport bounds
     const cameraX = -cameraOffset.current.x;
@@ -491,9 +483,9 @@ export default function InfiniteImageGrid() {
         targetOffset.current.y - cameraOffset.current.y
       );
 
-      // Reduce target offset when within 2px to eliminate slow tail-end easing
+      // Reduce target offset when within snap distance to eliminate slow tail-end easing
       // Only snap when NOT dragging to allow responsive small movements
-      if (!isDraggingRef.current && distance < 2 && distance > 0.1) {
+      if (!isDraggingRef.current && distance < GRID_CONFIG.physics.snapDistance && distance > GRID_CONFIG.physics.snapMinDistance) {
         targetOffset.current.x = cameraOffset.current.x;
         targetOffset.current.y = cameraOffset.current.y;
         setGridStopped(true); // Grid position is now stable
@@ -501,7 +493,7 @@ export default function InfiniteImageGrid() {
 
       // Also detect when grid is completely still (no movement at all)
       const momentumMag = Math.abs(momentum.current.x) + Math.abs(momentum.current.y);
-      if (!isDraggingRef.current && momentumMag === 0 && distance <= 0.1) {
+      if (!isDraggingRef.current && momentumMag === 0 && distance <= GRID_CONFIG.physics.snapMinDistance) {
         setGridStopped(true); // Grid is completely still
       }
 
@@ -516,9 +508,9 @@ export default function InfiniteImageGrid() {
           `translate3d(${cameraOffset.current.x}px, ${cameraOffset.current.y}px, 0)`;
       }
 
-      // Mark dirty when camera moves significantly, but throttle to max once per 100ms
+      // Mark dirty when camera moves significantly, but throttle updates
       const now = performance.now();
-      if (Math.abs(distance) > 200 && now - lastUpdateTime.current > 100) {
+      if (Math.abs(distance) > GRID_CONFIG.rendering.updateThrottleDistance && now - lastUpdateTime.current > GRID_CONFIG.rendering.updateThrottleTime) {
         isDirty.current = true;
         lastUpdateTime.current = now;
       }
@@ -545,10 +537,10 @@ export default function InfiniteImageGrid() {
     vel0.current.x = deltaX;
     vel0.current.y = deltaY;
 
-    // Direct calculation with pre-calculated weights [1/6, 2/6, 3/6]
-    // Weighted average: oldest=16.67%, middle=33.33%, newest=50%
-    momentum.current.x = (vel2.current.x * 0.1667 + vel1.current.x * 0.3333 + vel0.current.x * 0.5) * momentumStrength;
-    momentum.current.y = (vel2.current.y * 0.1667 + vel1.current.y * 0.3333 + vel0.current.y * 0.5) * momentumStrength;
+    // Direct calculation with pre-calculated weights
+    // Weighted average: oldest, middle, newest
+    momentum.current.x = (vel2.current.x * GRID_CONFIG.velocity.weight2 + vel1.current.x * GRID_CONFIG.velocity.weight1 + vel0.current.x * GRID_CONFIG.velocity.weight0) * momentumStrength;
+    momentum.current.y = (vel2.current.y * GRID_CONFIG.velocity.weight2 + vel1.current.y * GRID_CONFIG.velocity.weight1 + vel0.current.y * GRID_CONFIG.velocity.weight0) * momentumStrength;
   };
 
   // Mouse event handlers (same logic as original)
@@ -625,8 +617,8 @@ export default function InfiniteImageGrid() {
       // preventDefault only when actually dragging - this allows clicks to work
       e.preventDefault();
 
-      // Touch devices: 1.5x faster drag speed for better UX
-      const touchMultiplier = 1.8;
+      // Touch devices: faster drag speed for better UX
+      const touchMultiplier = GRID_CONFIG.interaction.touchMultiplier;
       targetOffset.current.x += deltaX * touchMultiplier;
       targetOffset.current.y += deltaY * touchMultiplier;
 
@@ -682,7 +674,7 @@ export default function InfiniteImageGrid() {
       }
     };
 
-    const activityInterval = setInterval(checkActivity, 50);
+    const activityInterval = setInterval(checkActivity, GRID_CONFIG.interaction.activityCheckInterval);
 
     return () => {
       clearInterval(activityInterval);
@@ -702,7 +694,7 @@ export default function InfiniteImageGrid() {
           width: '100%',
           height: '100vh',
           overflow: 'hidden',
-          backgroundColor: '#f9f9f9',
+          backgroundColor: GRID_CONFIG.ui.backgroundColor,
           position: 'relative',
           touchAction: 'none',
           cursor: isDragging ? 'grabbing' : 'grab',
@@ -712,6 +704,24 @@ export default function InfiniteImageGrid() {
         onMouseUp={handleMouseUp}
         onMouseLeave={handleMouseUp}
       >
+        {/* About text with inverse color effect */}
+        <div
+          style={{
+            position: 'fixed',
+            top: `${GRID_CONFIG.ui.about.top}px`,
+            right: `${GRID_CONFIG.ui.about.right}px`,
+            fontSize: `${GRID_CONFIG.ui.about.fontSize}px`,
+            fontWeight: GRID_CONFIG.ui.about.fontWeight,
+            fontFamily: 'Plus Jakarta Sans, sans-serif',
+            color: GRID_CONFIG.ui.about.color,
+            mixBlendMode: 'difference',
+            pointerEvents: 'none',
+            userSelect: 'none',
+            zIndex: 1000,
+          }}
+        >
+          About
+        </div>
       <div
         ref={containerRef}
         style={{
