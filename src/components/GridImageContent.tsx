@@ -4,7 +4,7 @@ interface GridImageContentProps {
   src: string;
   alt: string;
   title: string;
-  onClick: () => void;
+  onClick?: () => void;
 }
 
 function GridImageContent({ src, alt, title, onClick }: GridImageContentProps) {

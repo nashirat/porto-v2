@@ -3,27 +3,39 @@ import { useDragContext } from '../contexts/DragContext';
 
 interface GridVideoContentProps {
   src: string;
+  thumbnail: string;
   title: string;
-  onClick: () => void;
+  onClick?: () => void;
 }
 
-const PLACEHOLDER_IMG = '/1.png';
-
-function GridVideoContent({ src, title, onClick }: GridVideoContentProps) {
-  const { hasDragStopped, isDragging } = useDragContext();
+function GridVideoContent({ src, thumbnail, title, onClick }: GridVideoContentProps) {
+  const { gridStopped, isDragging } = useDragContext();
   const [showVideo, setShowVideo] = useState(false);
+  const [hideImage, setHideImage] = useState(false);
 
   useEffect(() => {
-    // When drag stops, wait 250ms before upgrading to video
+    // When grid stops, wait 1s before upgrading to video
     // Cancel if dragging starts again during the delay
-    if (hasDragStopped && !showVideo && !isDragging) {
+    if (gridStopped && !showVideo && !isDragging) {
       const upgradeTimer = setTimeout(() => {
         setShowVideo(true);
       }, 1000);
 
       return () => clearTimeout(upgradeTimer);
     }
-  }, [hasDragStopped, showVideo, isDragging]);
+  }, [gridStopped, showVideo, isDragging]);
+
+  useEffect(() => {
+    // When video starts showing, wait 100ms before hiding the image
+    // This prevents flashing during the transition
+    if (showVideo && !hideImage) {
+      const hideTimer = setTimeout(() => {
+        setHideImage(true);
+      }, 200);
+
+      return () => clearTimeout(hideTimer);
+    }
+  }, [showVideo, hideImage]);
 
   const commonStyles = {
     width: '100%',
@@ -35,36 +47,44 @@ function GridVideoContent({ src, title, onClick }: GridVideoContentProps) {
     cursor: 'pointer',
   };
 
-  if (!showVideo) {
-    // Show placeholder image while dragging or before first upgrade
-    return (
-      <img
-        src={PLACEHOLDER_IMG}
-        alt={title}
-        title={title}
-        style={commonStyles}
-        draggable={false}
-        onClick={onClick}
-      />
-    );
-  }
-
   return (
-    <video
-      src={src}
-      title={title}
-      style={{
-        ...commonStyles,
-        backfaceVisibility: 'hidden' as const,
-        transform: 'translateZ(0)',
-        willChange: 'transform',
-      }}
-      autoPlay
-      muted
-      loop
-      playsInline
-      onClick={onClick}
-    />
+    <div style={{ position: 'relative', width: '100%', height: '100%' }}>
+      {!hideImage && (
+        <img
+          src={thumbnail}
+          alt={title}
+          title={title}
+          style={{
+            ...commonStyles,
+            position: 'absolute' as const,
+            top: 0,
+            left: 0,
+          }}
+          draggable={false}
+          onClick={onClick}
+        />
+      )}
+      {showVideo && (
+        <video
+          src={src}
+          title={title}
+          style={{
+            ...commonStyles,
+            position: 'absolute' as const,
+            top: 0,
+            left: 0,
+            backfaceVisibility: 'hidden' as const,
+            transform: 'translateZ(0)',
+            willChange: 'transform',
+          }}
+          autoPlay
+          muted
+          loop
+          playsInline
+          onClick={onClick}
+        />
+      )}
+    </div>
   );
 }
 

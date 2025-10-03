@@ -17,6 +17,7 @@ interface PotteryItem {
   author: string;
   img: string;
   type?: 'img' | 'video'; // Optional: defaults to 'img'
+  thumbnail?: string; // Optional: thumbnail for video items
 }
 
 interface GridItem {
@@ -40,8 +41,11 @@ export default function InfiniteImageGrid() {
   const cameraOffset = useRef<Position>({ x: 0, y: 0 });
   const targetOffset = useRef<Position>({ x: 0, y: 0 });
 
-  // Track if drag has stopped at least once
-  const [hasDragStopped, setHasDragStopped] = useState(false);
+  // Track when grid has stopped moving (for clicked item position correction)
+  const [gridStopped, setGridStopped] = useState(false);
+
+  // Track clicked item ID for position correction
+  const [clickedItemId, setClickedItemId] = useState<string | null>(null);
 
   // Grid settings - Dynamic sizing based on viewport
   const itemWidth = useRef(476);
@@ -99,10 +103,10 @@ export default function InfiniteImageGrid() {
     // Since gap = cardHeight × 0.320 (190/573 ratio - 30px smaller than original 220)
     // 2×cardHeight + cardHeight×0.320 + 0.1×cardHeight = viewportHeight
     // cardHeight × (2 + 0.320 + 0.1) = viewportHeight
-    const cardHeight = viewportHeight / 2.780;
+    const cardHeight = viewportHeight / 2.300;
 
     itemHeight.current = cardHeight;
-    gapY.current = cardHeight * 0.360;
+    gapY.current = cardHeight * 0.350;
     gapX.current = gapY.current; // Keep square gaps
     itemWidth.current = cardHeight * (476 / 593); // Maintain aspect ratio (20px smaller height)
 
@@ -247,6 +251,7 @@ export default function InfiniteImageGrid() {
     const component = itemType === 'video' ? (
       <GridVideoContent
         src={selectedPottery.img}
+        thumbnail={selectedPottery.thumbnail!}
         title={`${selectedPottery.title} by ${selectedPottery.author}`}
         onClick={() => console.log(`Clicked: "${selectedPottery.title}" by ${selectedPottery.author} - ${selectedPottery.description}`)}
       />
@@ -366,6 +371,8 @@ export default function InfiniteImageGrid() {
           momentum.current.x = 0;
           momentum.current.y = 0;
         }
+      } else if (isDraggingRef.current) {
+        // User is dragging, keep momentum
       } else {
         // Force complete stop
         momentum.current.x = 0;
@@ -383,6 +390,13 @@ export default function InfiniteImageGrid() {
       if (!isDraggingRef.current && distance < 2 && distance > 0.1) {
         targetOffset.current.x = cameraOffset.current.x;
         targetOffset.current.y = cameraOffset.current.y;
+        setGridStopped(true); // Grid position is now stable
+      }
+
+      // Also detect when grid is completely still (no movement at all)
+      const momentumMag = Math.abs(momentum.current.x) + Math.abs(momentum.current.y);
+      if (!isDraggingRef.current && momentumMag === 0 && distance <= 0.1) {
+        setGridStopped(true); // Grid is completely still
       }
 
       // Smooth camera movement
@@ -427,6 +441,7 @@ export default function InfiniteImageGrid() {
   const handleMouseDown = (e: React.MouseEvent) => {
     isDraggingRef.current = true;
     setIsDragging(true);
+    setGridStopped(false); // Reset - grid is moving again
     lastPosition.current = { x: e.clientX, y: e.clientY };
     lastMoveTime.current = performance.now();
     isMoving.current = true;
@@ -461,7 +476,7 @@ export default function InfiniteImageGrid() {
 
     isDraggingRef.current = false;
     setIsDragging(false);
-    setHasDragStopped(true); // Notify video components to upgrade
+    // Don't set hasDragStopped here - wait for momentum to actually stop in animation loop
 
     // Don't reset stretch velocity - let it follow the momentum
 
@@ -478,6 +493,7 @@ export default function InfiniteImageGrid() {
     if (e.touches.length === 1) {
       isDraggingRef.current = true;
       setIsDragging(true);
+      setGridStopped(false); // Reset - grid is moving again
       lastPosition.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
       lastMoveTime.current = performance.now();
       isMoving.current = true;
@@ -513,7 +529,7 @@ export default function InfiniteImageGrid() {
 
     isDraggingRef.current = false;
     setIsDragging(false);
-    setHasDragStopped(true); // Notify video components to upgrade
+    // Don't set hasDragStopped here - wait for momentum to actually stop in animation loop
 
     // Don't reset stretch velocity - let it follow the momentum
 
@@ -544,7 +560,7 @@ export default function InfiniteImageGrid() {
 
 
   return (
-    <DragContext.Provider value={{ hasDragStopped, isDragging }}>
+    <DragContext.Provider value={{ gridStopped, isDragging, clickedItemId, setClickedItemId }}>
       {/* Loading screen */}
       {isLoading && (
         <div
@@ -581,6 +597,7 @@ export default function InfiniteImageGrid() {
           transition: 'transform 1.2s cubic-bezier(0.4, 0, 0.2, 1)',
           left: `${-(containerSize - 100) / 2}%`,
           top: `${-(containerSize - 100) / 2}vh`,
+          cursor: isDragging ? 'grabbing' : 'grab',
         }}
         onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove}

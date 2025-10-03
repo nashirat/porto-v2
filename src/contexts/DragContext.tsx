@@ -1,13 +1,17 @@
 import { createContext, useContext } from 'react';
 
 interface DragContextType {
-  hasDragStopped: boolean;
+  gridStopped: boolean;
   isDragging: boolean;
+  clickedItemId: string | null;
+  setClickedItemId: (id: string | null) => void;
 }
 
 export const DragContext = createContext<DragContextType>({
-  hasDragStopped: false,
-  isDragging: false
+  gridStopped: false,
+  isDragging: false,
+  clickedItemId: null,
+  setClickedItemId: () => {}
 });
 
 export const useDragContext = () => useContext(DragContext);
