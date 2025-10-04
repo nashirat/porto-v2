@@ -94,6 +94,7 @@ export default function InfiniteImageGrid() {
   const [isReady, setIsReady] = useState(false); // Don't render until dimensions calculated
   const [isLoading, setIsLoading] = useState(true); // Show loader until images preloaded
   const [loadingProgress, setLoadingProgress] = useState(0); // Loading percentage
+  const [showGuide, setShowGuide] = useState(true); // Show navigation guide on first load
 
   // Update visible items when ready
   useEffect(() => {
@@ -557,6 +558,7 @@ export default function InfiniteImageGrid() {
     isDraggingRef.current = true;
     setIsDragging(true);
     setGridStopped(false); // Reset - grid is moving again
+    setShowGuide(false); // Hide guide on first interaction
     lastPosition.current = { x: e.clientX, y: e.clientY };
     lastMoveTime.current = performance.now();
     isMoving.current = true;
@@ -610,6 +612,7 @@ export default function InfiniteImageGrid() {
       isDraggingRef.current = true;
       setIsDragging(true);
       setGridStopped(false); // Reset - grid is moving again
+      setShowGuide(false); // Hide guide on first interaction
       lastPosition.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
       lastMoveTime.current = performance.now();
       isMoving.current = true;
@@ -653,6 +656,30 @@ export default function InfiniteImageGrid() {
     }
   };
 
+  // Handle trackpad scroll (two-finger gesture)
+  const handleWheel = (e: WheelEvent) => {
+    // Only handle trackpad (deltaMode === 0), not mouse wheel
+    if (e.deltaMode !== 0) return;
+
+    e.preventDefault();
+
+    // Hide guide on first interaction
+    setShowGuide(false);
+
+    // Apply same multiplier as touch for consistent feel
+    const trackpadMultiplier = GRID_CONFIG.interaction.touchMultiplier;
+    const deltaX = -e.deltaX * trackpadMultiplier;
+    const deltaY = -e.deltaY * trackpadMultiplier;
+
+    targetOffset.current.x += deltaX;
+    targetOffset.current.y += deltaY;
+
+    updateVelocity(deltaX, deltaY);
+
+    lastMoveTime.current = performance.now();
+    isMoving.current = true;
+  };
+
   // Attach native touch event listeners with explicit passive: false
   useEffect(() => {
     const container = dragContainerRef.current;
@@ -664,11 +691,13 @@ export default function InfiniteImageGrid() {
     container.addEventListener('touchstart', handleTouchStartNative, options);
     container.addEventListener('touchmove', handleTouchMoveNative, options);
     container.addEventListener('touchend', handleTouchEndNative); // No passive needed, no preventDefault
+    container.addEventListener('wheel', handleWheel, options); // Add trackpad support
 
     return () => {
       container.removeEventListener('touchstart', handleTouchStartNative);
       container.removeEventListener('touchmove', handleTouchMoveNative);
       container.removeEventListener('touchend', handleTouchEndNative);
+      container.removeEventListener('wheel', handleWheel);
     };
   }, []); // Empty deps - handlers use refs, no recreation needed
 
@@ -695,6 +724,36 @@ export default function InfiniteImageGrid() {
     <DragContext.Provider value={{ gridStopped, isDragging, clickedItemId, setClickedItemId }}>
       {/* Loading screen */}
       {isLoading && <Loader progress={loadingProgress} />}
+
+      {/* Navigation Guide */}
+      {showGuide && !isLoading && (
+        <div
+          style={{
+            position: 'fixed',
+            top: '50%',
+            left: '50%',
+            transform: 'translate(-50%, -50%)',
+            fontSize: '64px',
+            fontWeight: 600,
+            fontFamily: 'Plus Jakarta Sans, sans-serif',
+            color: '#ffffff',
+            mixBlendMode: 'difference',
+            zIndex: 1001,
+            pointerEvents: 'none',
+            userSelect: 'none',
+            opacity: showGuide ? 1 : 0,
+            transition: 'opacity 0.5s ease-out',
+            textAlign: 'center',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: '24px',
+          }}
+        >
+          <div style={{ fontSize: '48px' }}>↔</div>
+          <div>Drag to navigate</div>
+        </div>
+      )}
 
       {/* Main container */}
       <div
