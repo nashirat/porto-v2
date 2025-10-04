@@ -3,7 +3,7 @@ import { useRef, useEffect, memo } from 'react';
 interface OverlayProps {
   isAnimating: boolean;
   onOverlayClick: () => void;
-  onOverlayTouch: () => void;
+  onOverlayTouch: (e: React.TouchEvent) => void;
   preventDrag: (e: React.MouseEvent | React.TouchEvent) => void;
 }
 
