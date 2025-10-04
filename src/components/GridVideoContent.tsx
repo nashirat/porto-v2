@@ -47,7 +47,7 @@ function GridVideoContent({ src, thumbnail, title, onClick }: GridVideoContentPr
     if (gridStopped && !showVideo && !isDragging) {
       const upgradeTimer = setTimeout(() => {
         setShowVideo(true);
-      }, 500);
+      }, 800);
 
       return () => clearTimeout(upgradeTimer);
     }
