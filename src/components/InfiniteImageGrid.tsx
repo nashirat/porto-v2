@@ -145,7 +145,16 @@ export default function InfiniteImageGrid() {
   const getNextPottery = (): PotteryItem => {
     // Re-shuffle when we've used all items
     if (potteryIndex.current >= shuffledPottery.current.length) {
-      shuffledPottery.current = shuffleArray(potteryData as PotteryItem[]);
+      const lastItem = shuffledPottery.current[shuffledPottery.current.length - 1];
+
+      // Keep shuffling until first item is different from last item
+      // This prevents duplicates appearing adjacent when array boundary is crossed
+      let newShuffle;
+      do {
+        newShuffle = shuffleArray(potteryData as PotteryItem[]);
+      } while (newShuffle[0].id === lastItem.id && potteryData.length > 1);
+
+      shuffledPottery.current = newShuffle;
       potteryIndex.current = 0;
     }
 
@@ -741,6 +750,7 @@ export default function InfiniteImageGrid() {
               y={item.y}
               width={item.width}
               height={item.height}
+              author={item.pottery.author}
             >
               {itemType === 'video' ? (
                 <GridVideoContent

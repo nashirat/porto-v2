@@ -1,6 +1,7 @@
 import { ReactNode, memo, useState, useRef, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { useDragContext } from '../contexts/DragContext';
+import Overlay from './Overlay';
 
 interface GridItemContainerProps {
   id: string;
@@ -9,6 +10,7 @@ interface GridItemContainerProps {
   width: number;
   height: number;
   children: ReactNode;
+  author: string;
 }
 
 function GridItemContainer({
@@ -17,7 +19,8 @@ function GridItemContainer({
   y,
   width,
   height,
-  children
+  children,
+  author
 }: GridItemContainerProps) {
   const { gridStopped, clickedItemId, setClickedItemId } = useDragContext();
   const [isFixed, setIsFixed] = useState(false);
@@ -164,22 +167,25 @@ function GridItemContainer({
 
   if (isFixed && fixedRect) {
     // Calculate position based on animation state
-    let itemLeft, itemTop, itemWidth, itemHeight;
+    let itemLeft, itemTop, itemWidth, itemHeight, textTop;
 
     if (isAnimating) {
       // Centered and scaled to 160%
       const targetWidth = fixedRect.width * 2;
       const targetHeight = fixedRect.height * 2;
+      const centeredTop = (window.innerHeight - targetHeight) / 2;
       itemLeft = (window.innerWidth - targetWidth) / 2;
-      itemTop = (window.innerHeight - targetHeight) / 2;
+      itemTop = centeredTop - 48; // Move image 48px higher for text space
       itemWidth = targetWidth;
       itemHeight = targetHeight;
+      textTop = centeredTop + targetHeight + 32; // Text stays at original centered position
     } else {
       // At original clicked position (or closing back to it)
       itemLeft = fixedRect.left;
       itemTop = fixedRect.top;
       itemWidth = fixedRect.width;
       itemHeight = fixedRect.height;
+      textTop = fixedRect.top + fixedRect.height + 32;
     }
 
     return (
@@ -200,26 +206,11 @@ function GridItemContainer({
         {/* Overlay and fixed item rendered at body level via portal */}
         {createPortal(
           <>
-            {/* Overlay - Fullscreen */}
-            <div
-              style={{
-                position: 'fixed',
-                top: 0,
-                left: 0,
-                width: '100vw',
-                height: '100vh',
-                backgroundColor: isAnimating ? 'rgba(172, 174, 177, 0.92)' : 'rgba(172, 174, 177, 0)',
-                zIndex: 999,
-                pointerEvents: 'auto',
-                transition: 'background-color 0.5s cubic-bezier(0.4, 0, 0.2, 1)',
-              }}
-              onClick={handleOverlayClick}
-              onTouchEnd={handleOverlayTouch}
-              onMouseDown={preventDrag}
-              onMouseMove={preventDrag}
-              onMouseUp={preventDrag}
-              onTouchStart={preventDrag}
-              onTouchMove={preventDrag}
+            <Overlay
+              isAnimating={isAnimating}
+              onOverlayClick={handleOverlayClick}
+              onOverlayTouch={handleOverlayTouch}
+              preventDrag={preventDrag}
             />
             {/* Item */}
             <div
@@ -234,6 +225,26 @@ function GridItemContainer({
               }}
             >
               {children}
+            </div>
+            {/* Author text below item */}
+            <div
+              style={{
+                position: 'fixed',
+                left: '50%',
+                top: `${textTop}px`,
+                transform: 'translateX(-50%)',
+                fontSize: '24px',
+                fontWeight: 600,
+                fontFamily: 'Plus Jakarta Sans, sans-serif',
+                color: '#000000',
+                zIndex: 1000,
+                transition: 'opacity 0.5s cubic-bezier(0.4, 0, 0.2, 1)',
+                opacity: isAnimating ? 1 : 0,
+                pointerEvents: 'none',
+                userSelect: 'none',
+              }}
+            >
+              {author}
             </div>
           </>,
           document.body

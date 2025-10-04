@@ -18,7 +18,7 @@
   {"id": 17, "title": "Design 17", "description": "Artwork", "author": "Retrix", "img": "/img/17.jpg"},
   {"id": 18, "title": "Design 18", "description": "Artwork", "author": "Retrix", "img": "/img/18.jpg"},
   {"id": 19, "title": "Design 19", "description": "Artwork", "author": "Retrix", "img": "/img/19.jpg"},
-  {"id": 20, "title": "Design 20", "description": "Artwork", "author": "Retrix", "img": "/img/20.jpg"},
+  {"id": 20, "title": "Design 20", "description": "Artwork", "author": "@beritadesign", "img": "/img/20.jpg"},
   {"id": 21, "title": "Design 21", "description": "Artwork", "author": "Retrix", "img": "/img/21.jpg"},
   {"id": 22, "title": "Design 22", "description": "Artwork", "author": "Retrix", "img": "/img/22.jpg"},
   {"id": 23, "title": "Design 23", "description": "Artwork", "author": "Retrix", "img": "/img/23.jpg"},
@@ -99,5 +99,6 @@
   {"id": 98, "title": "Design 96", "description": "Artwork", "author": "Retrix", "img": "/img/96.jpg"},
   {"id": 99, "title": "Design 97", "description": "Artwork", "author": "Retrix", "img": "/img/97.jpg"},
   {"id": 100, "title": "Design 98", "description": "Artwork", "author": "Retrix", "img": "/img/98.jpg"},
-  {"id": 101, "title": "Video Artwork 3", "description": "Motion design piece", "author": "Retrix", "img": "/vids/video3.mp4", "type": "video", "thumbnail": "/vids/video3thumb.png"}
+  {"id": 101, "title": "Video Artwork 3", "description": "Motion design piece", "author": "Retrix", "img": "/vids/video3.mp4", "type": "video", "thumbnail": "/vids/video3thumb.png"},
+  {"id": 101, "title": "Video Artwork 4", "description": "Motion design piece", "author": "Retrix", "img": "/vids/video4.mp4", "type": "video", "thumbnail": "/vids/video4thumb.png"}
 ]
