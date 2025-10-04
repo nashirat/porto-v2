@@ -8,6 +8,34 @@ interface GridVideoContentProps {
   onClick?: () => void;
 }
 
+// Static styles to prevent recreation on every render
+const BASE_STYLES = {
+  width: '100%',
+  height: '100%',
+  objectFit: 'cover' as const,
+  display: 'block',
+  userSelect: 'none' as const,
+  pointerEvents: 'auto' as const,
+  cursor: 'pointer',
+} as const;
+
+const IMAGE_STYLES = {
+  ...BASE_STYLES,
+  position: 'absolute' as const,
+  top: 0,
+  left: 0,
+} as const;
+
+const VIDEO_STYLES = {
+  ...BASE_STYLES,
+  position: 'absolute' as const,
+  top: 0,
+  left: 0,
+  backfaceVisibility: 'hidden' as const,
+  transform: 'translateZ(0)',
+  willChange: 'transform',
+} as const;
+
 function GridVideoContent({ src, thumbnail, title, onClick }: GridVideoContentProps) {
   const { gridStopped, isDragging } = useDragContext();
   const [showVideo, setShowVideo] = useState(false);
@@ -19,7 +47,7 @@ function GridVideoContent({ src, thumbnail, title, onClick }: GridVideoContentPr
     if (gridStopped && !showVideo && !isDragging) {
       const upgradeTimer = setTimeout(() => {
         setShowVideo(true);
-      }, 1000);
+      }, 500);
 
       return () => clearTimeout(upgradeTimer);
     }
@@ -36,20 +64,9 @@ function GridVideoContent({ src, thumbnail, title, onClick }: GridVideoContentPr
       return () => clearTimeout(hideTimer);
     }
   }, [showVideo, hideImage]);
-
   const handleTouch = (e: React.TouchEvent) => {
     e.stopPropagation();
     if (onClick) onClick();
-  };
-
-  const commonStyles = {
-    width: '100%',
-    height: '100%',
-    objectFit: 'cover' as const,
-    display: 'block',
-    userSelect: 'none' as const,
-    pointerEvents: 'auto' as const,
-    cursor: 'pointer',
   };
 
   return (
@@ -59,12 +76,7 @@ function GridVideoContent({ src, thumbnail, title, onClick }: GridVideoContentPr
           src={thumbnail}
           alt={title}
           title={title}
-          style={{
-            ...commonStyles,
-            position: 'absolute' as const,
-            top: 0,
-            left: 0,
-          }}
+          style={IMAGE_STYLES}
           draggable={false}
           onClick={onClick}
           onTouchEnd={handleTouch}
@@ -74,15 +86,7 @@ function GridVideoContent({ src, thumbnail, title, onClick }: GridVideoContentPr
         <video
           src={src}
           title={title}
-          style={{
-            ...commonStyles,
-            position: 'absolute' as const,
-            top: 0,
-            left: 0,
-            backfaceVisibility: 'hidden' as const,
-            transform: 'translateZ(0)',
-            willChange: 'transform',
-          }}
+          style={VIDEO_STYLES}
           autoPlay
           muted
           loop

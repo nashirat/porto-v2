@@ -4,7 +4,7 @@
 export const GRID_CONFIG = {
   // Grid Layout - Desktop
   desktop: {
-    cardHeightDivisor: 2.850, // viewportHeight / this = cardHeight
+    cardHeightDivisor: 2.750, // viewportHeight / this = cardHeight
     gapRatio: 0.295, // gap = cardHeight × this
     aspectRatio: 476 / 593, // width/height ratio for cards
   },

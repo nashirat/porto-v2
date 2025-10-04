@@ -10,7 +10,7 @@
   4. Optimize CSS transforms (#4)
   5. Add useCallback to handlers (#5)
   6. Improve touch events (#6)
-  7. Add video pooling (#7)
+  7. ~~Add video pooling (#7)~~ - SKIP: Current implementation (thumbnail → video without removal) intentionally prevents lag
   8. Reduce activity check frequency (#8)
 
 ## Critical Performance Bottlenecks
@@ -211,58 +211,16 @@ useEffect(() => {
 
 ---
 
-### 🟡 **7. Video Loading Strategy**
+### ~~🟡 **7. Video Loading Strategy**~~ **SKIP - DO NOT IMPLEMENT**
 **File**: `GridVideoContent.tsx`
 
-**Issues:**
-- All videos start loading after 1s delay, causing memory spike
-- No limit on concurrent video elements
-- Videos kept in DOM even when scrolled out of view
+**Why Skip:**
+Current implementation (thumbnail → video upgrade without removal) is intentional to prevent lag/snags when videos render out of view. Removing videos or adding pooling would revert this fix and cause performance issues during scrolling.
 
-**Fix:**
-```typescript
-// Add video pooling and intersection observer
-const MAX_CONCURRENT_VIDEOS = 3;
-let activeVideoCount = 0;
-
-function GridVideoContent({ src, thumbnail, title, onClick }) {
-  const [isVisible, setIsVisible] = useState(false);
-  const containerRef = useRef<HTMLDivElement>(null);
-
-  // Use Intersection Observer to detect visibility
-  useEffect(() => {
-    if (!containerRef.current) return;
-
-    const observer = new IntersectionObserver(
-      ([entry]) => setIsVisible(entry.isIntersecting),
-      { rootMargin: '100px', threshold: 0.1 }
-    );
-
-    observer.observe(containerRef.current);
-    return () => observer.disconnect();
-  }, []);
-
-  useEffect(() => {
-    // Only upgrade to video if visible and under limit
-    if (gridStopped && !showVideo && !isDragging && isVisible) {
-      if (activeVideoCount < MAX_CONCURRENT_VIDEOS) {
-        setShowVideo(true);
-        activeVideoCount++;
-      }
-    }
-
-    // Cleanup when scrolled away
-    if (!isVisible && showVideo) {
-      setShowVideo(false);
-      activeVideoCount--;
-    }
-  }, [gridStopped, showVideo, isDragging, isVisible]);
-
-  // ... rest
-}
-```
-
-**Expected Gain**: 70% reduction in memory pressure
+**Current Strategy (Keep As Is):**
+- Show thumbnail initially
+- Upgrade to video when grid stops
+- Never remove video once loaded (prevents re-render lag)
 
 ---
 
@@ -291,7 +249,7 @@ const activityInterval = setInterval(checkActivity, 100); // Was 50ms
 | 🟡 Important | CSS custom properties | InfiniteImageGrid:390-393 | Medium | Medium |
 | 🟡 Important | Event handler allocation | GridItemContainer:30-44 | Medium | Low |
 | 🟡 Important | Touch event blocking | InfiniteImageGrid:473-524 | Medium | Medium |
-| 🟡 Important | Video loading strategy | GridVideoContent | Medium | Medium |
+| ~~🟡 Important~~ | ~~Video loading strategy~~ | ~~GridVideoContent~~ | ~~Medium~~ | **SKIP** |
 | 🟢 Recommended | Activity check frequency | InfiniteImageGrid:537 | Low | Low |
 
 ## Expected Overall Performance Gains
@@ -310,7 +268,7 @@ Implementing all optimizations:
 4. Optimize CSS transforms (Important #4)
 5. Add useCallback to handlers (Important #5)
 6. Improve touch events (Important #6)
-7. Add video pooling (Important #7)
+7. ~~Add video pooling (Important #7)~~ - **SKIP**: Current implementation prevents lag
 8. Reduce activity check frequency (Recommended #8)
 
 All optimizations maintain existing UX behavior.
